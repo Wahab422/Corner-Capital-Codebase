@@ -28,7 +28,6 @@
  *   - onInteraction: if true, only start after first user interaction (default false for hero).
  */
 
-import { getLenis, startLenis, stopLenis } from '../global/lenis';
 import { handleError } from '../utils/helpers';
 import { logger } from '../utils/logger';
 import { ensureGSAPLoaded } from './gsap';
@@ -397,22 +396,18 @@ async function initRiveScrub(el) {
         },
       });
 
-      if (getLenis()) {
-        stopLenis();
-      } else {
-        scrollLockHandler = (e) => {
-          if (!autoplayDone) e.preventDefault();
-        };
-        keyLockHandler = (e) => {
-          if (autoplayDone) return;
-          if (['Space', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(e.key)) {
-            e.preventDefault();
-          }
-        };
-        window.addEventListener('wheel', scrollLockHandler, { passive: false });
-        window.addEventListener('touchmove', scrollLockHandler, { passive: false });
-        window.addEventListener('keydown', keyLockHandler);
-      }
+      scrollLockHandler = (e) => {
+        if (!autoplayDone) e.preventDefault();
+      };
+      keyLockHandler = (e) => {
+        if (autoplayDone) return;
+        if (['Space', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(e.key)) {
+          e.preventDefault();
+        }
+      };
+      window.addEventListener('wheel', scrollLockHandler, { passive: false });
+      window.addEventListener('touchmove', scrollLockHandler, { passive: false });
+      window.addEventListener('keydown', keyLockHandler);
 
       const tick = (time) => {
         onResize();
@@ -451,9 +446,7 @@ async function initRiveScrub(el) {
           artboard.advance(0);
           if (progress >= 1) {
             autoplayDone = true;
-            if (getLenis()) {
-              startLenis();
-            } else if (scrollLockHandler) {
+            if (scrollLockHandler) {
               window.removeEventListener('wheel', scrollLockHandler);
               window.removeEventListener('touchmove', scrollLockHandler);
               scrollLockHandler = null;
@@ -632,7 +625,6 @@ async function initRiveScrub(el) {
       if (rafId != null) rive.cancelAnimationFrame(rafId);
       rafId = null;
       if (isHybrid) {
-        if (getLenis()) startLenis();
         if (scrollLockHandler) {
           window.removeEventListener('wheel', scrollLockHandler);
           window.removeEventListener('touchmove', scrollLockHandler);

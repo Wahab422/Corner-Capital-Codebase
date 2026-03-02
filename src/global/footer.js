@@ -13,39 +13,7 @@ const cleanupFunctions = [];
 export function initFooter() {
   logger.log('🦶 Footer initialized');
 
-  // Dynamic copyright year
-  const copyrightYear = document.querySelector('[data-copyright-year]');
-  if (copyrightYear) {
-    copyrightYear.textContent = new Date().getFullYear();
-  }
-
-  // Back to top button
-  const backToTopButton = document.querySelector('[data-back-to-top]');
-  if (backToTopButton) {
-    // Throttled scroll handler for performance
-    const scrollHandler = rafThrottle(() => {
-      if (window.pageYOffset > 300) {
-        backToTopButton.classList.add('is-visible');
-      } else {
-        backToTopButton.classList.remove('is-visible');
-      }
-    });
-
-    window.addEventListener('scroll', scrollHandler, { passive: true });
-
-    // Smooth scroll to top
-    const handleClick = () => {
-      backToTop();
-    };
-
-    backToTopButton.addEventListener('click', handleClick, { passive: true });
-
-    // Store cleanup
-    cleanupFunctions.push(() => {
-      window.removeEventListener('scroll', scrollHandler);
-      backToTopButton.removeEventListener('click', handleClick);
-    });
-  }
+  handleLocationsection();
 }
 
 /**
@@ -61,4 +29,117 @@ export function cleanupFooter() {
     }
   });
   cleanupFunctions.length = 0;
+}
+
+export function handleLocationsection() {
+  const section = document.querySelector('#clip-slider-section');
+  if (!section) return;
+  const slides = Array.from(section.querySelectorAll('.clip-slide'));
+
+  const locationNames = [...section.querySelectorAll('.location-texts .rotation-text')];
+  const locationTexts = [...section.querySelectorAll('.location-texts-wrap .rotation-text')];
+  const locationTimes = [...section.querySelectorAll('.location-times-wrap .rotation-text')];
+  const dayIcon = section.querySelector('[location-time-comp_icon="day"]');
+  const nightIcon = section.querySelector('[location-time-comp_icon="night"]');
+  const timeIcons = [dayIcon, nightIcon].filter(Boolean);
+
+  const rotateDelayMs = 50;
+  const iconClassDelayMs = 50;
+  const textStaggerMs = 80;
+
+  let textStaggerIds = [];
+  let iconDelayId = null;
+  let iconClassDelayId = null;
+  let iconRotation = 0;
+
+  const STATE_CLASSES = ['is-passed', 'is-active', 'is-next', 'is-incoming'];
+
+  let activeIndex = slides.findIndex((s) => s.classList.contains('is-active'));
+  if (activeIndex === -1) activeIndex = 0;
+
+  let zIndexCounter = 10;
+  let zTimeout;
+
+  function updateTextGroup(list, prev, next) {
+    if (!list.length) return;
+    list.forEach((el, i) => {
+      if (i === next) {
+        el.classList.add('in');
+        el.classList.remove('out');
+      } else if (i === prev) {
+        el.classList.remove('in');
+        el.classList.add('out');
+      } else {
+        el.classList.remove('in', 'out');
+      }
+    });
+  }
+
+  function runLocationAnimations(prevIndex, nextIndex) {
+    textStaggerIds.forEach((id) => clearTimeout(id));
+    textStaggerIds = [];
+    textStaggerIds.push(setTimeout(() => updateTextGroup(locationTexts, prevIndex, nextIndex), 0));
+    textStaggerIds.push(
+      setTimeout(() => updateTextGroup(locationNames, prevIndex, nextIndex), textStaggerMs)
+    );
+    textStaggerIds.push(
+      setTimeout(() => updateTextGroup(locationTimes, prevIndex, nextIndex), textStaggerMs * 2)
+    );
+
+    const activeTimeEl = locationTimes[nextIndex];
+    const dayNight = activeTimeEl?.getAttribute('data-daynight') || 'day';
+    clearTimeout(iconClassDelayId);
+    iconClassDelayId = setTimeout(() => {
+      if (dayIcon) {
+        dayIcon.classList.toggle('in', dayNight === 'day');
+        dayIcon.classList.toggle('out', dayNight !== 'day');
+      }
+      if (nightIcon) {
+        nightIcon.classList.toggle('in', dayNight === 'night');
+        nightIcon.classList.toggle('out', dayNight !== 'night');
+      }
+    }, iconClassDelayMs);
+
+    clearTimeout(iconDelayId);
+    iconDelayId = setTimeout(() => {
+      if (!timeIcons.length) return;
+      iconRotation += 30;
+      timeIcons.forEach((icon) => {
+        icon.style.transition = 'transform 0.6s ease';
+        icon.style.transform = `rotate(${iconRotation}deg)`;
+      });
+    }, rotateDelayMs);
+  }
+
+  function updateStates(prevIndexForAnim = null) {
+    const prevIndex = prevIndexForAnim ?? (activeIndex - 1 + slides.length) % slides.length;
+
+    slides.forEach((slide) => slide.classList.remove(...STATE_CLASSES));
+
+    const total = slides.length;
+    const passed = (activeIndex - 1 + total) % total;
+    const active = activeIndex;
+    const next = (activeIndex + 1) % total;
+    const incoming = (activeIndex + 2) % total;
+
+    slides[passed].classList.add('is-passed');
+    slides[active].classList.add('is-active');
+    slides[next].classList.add('is-next');
+    slides[incoming].classList.add('is-incoming');
+
+    clearTimeout(zTimeout);
+    zTimeout = setTimeout(() => {
+      slides[incoming].style.zIndex = ++zIndexCounter;
+    }, 1600);
+
+    runLocationAnimations(prevIndex, activeIndex);
+  }
+
+  setInterval(() => {
+    const prev = activeIndex;
+    activeIndex = (activeIndex + 1) % slides.length;
+    updateStates(prev);
+  }, 5000);
+
+  updateStates();
 }

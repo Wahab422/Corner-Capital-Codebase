@@ -1,7 +1,4 @@
-/**
- * Global Code - Runs on Every Page
- * Add code here that should execute on all pages (navbar, footer, etc.)
- */
+
 
 import { initLenis } from './lenis';
 import { initNavbar, cleanupNavbar } from './navbar';
@@ -9,47 +6,70 @@ import { initFooter, cleanupFooter } from './footer';
 import { handleGlobalAnimation, ensureGSAPLoaded } from '../components/gsap';
 import { logger } from '../utils/logger';
 
-/**
- * Initialize all global components
- * This runs on every page before page-specific code
- */
 export async function initGlobal() {
   logger.log('🌐 Initializing global components...');
 
-  // Cleanup previous instances if re-initializing
   cleanupNavbar();
   cleanupFooter();
 
-  // Initialize Lenis smooth scroll (should be first)
   initLenis();
 
-  // Initialize navbar
   initNavbar();
-
-  // Initialize footer
+  initLocationsTabs();
   initFooter();
 
-  // Load GSAP and ScrollTrigger globally (Performance optimized - non-blocking)
-  // Loads after critical components to avoid blocking page initialization
   loadGSAPLazy();
 
-  // Add any other global initializations here
-  // Example: Cookie consent, analytics, chat widgets, etc.
+  (() => {
+    const timedEls = [...document.querySelectorAll('[data-time]')];
+    if (!timedEls.length) return;
+
+    const timezones = {
+      NY: 'America/New_York',
+      SF: 'America/Los_Angeles',
+      TE: 'Asia/Jerusalem',
+      TK: 'Asia/Tokyo',
+      TO: 'Asia/Tokyo',
+    };
+
+    const timeRefreshMs = 30_000;
+    let timeRefreshId = null;
+
+    const updateTimes = () => {
+      timedEls.forEach((el) => {
+        const code = el.dataset.time;
+        const tz = timezones[code];
+        if (!tz) return;
+
+        const localDate = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
+        const hours = localDate.getHours();
+        const minutes = localDate.getMinutes();
+        const hh = String(hours).padStart(2, '0');
+        const mm = String(minutes).padStart(2, '0');
+        el.textContent = `${hh}:${mm}`;
+
+        const isDay = hours >= 6 && hours < 18;
+        el.setAttribute('data-daynight', isDay ? 'day' : 'night');
+      });
+    };
+
+    const startTimeRefresh = () => {
+      clearInterval(timeRefreshId);
+      timeRefreshId = setInterval(updateTimes, timeRefreshMs);
+    };
+
+    window.addEventListener('data-time:refresh', updateTimes);
+
+    updateTimes();
+    startTimeRefresh();
+  })();
 }
 
-/**
- * Lazy load GSAP and ScrollTrigger (Performance optimized)
- * Loads on first user interaction to avoid blocking initial page load
- * Uses the centralized loading functions from gsap.js to prevent duplicate loads
- */
 function loadGSAPLazy() {
-  // Don't load if GSAP is already loaded
   if (typeof window.gsap !== 'undefined' && typeof window.ScrollTrigger !== 'undefined') {
-    // GSAP already loaded, just initialize animations
     handleGlobalAnimation().catch((error) => {
       logger.error('Error initializing GSAP animations:', error);
     });
-    gsapGlobalAnimations();
     return;
   }
 
@@ -60,24 +80,18 @@ function loadGSAPLazy() {
     isLoaded = true;
 
     try {
-      // Use the centralized loading function from gsap.js
-      // This ensures proper tracking and prevents duplicate loads
       await ensureGSAPLoaded();
 
       logger.log('✅ GSAP and ScrollTrigger loaded globally');
 
-      // Initialize global animations after GSAP is loaded
-      // Small delay to ensure Lenis is ready if it loads first
       await new Promise((resolve) => setTimeout(resolve, 100));
       await handleGlobalAnimation();
-      gsapGlobalAnimations();
     } catch (error) {
       logger.error('Error loading GSAP:', error);
-      isLoaded = false; // Allow retry on error
+      isLoaded = false;
     }
   };
 
-  // Strategy 1: Load on first user interaction (most performant)
   const interactionEvents = ['scroll', 'wheel', 'touchstart', 'click', 'mousemove', 'keydown'];
   let hasInteracted = false;
 
@@ -85,82 +99,177 @@ function loadGSAPLazy() {
     if (hasInteracted) return;
     hasInteracted = true;
 
-    // Remove all listeners
     interactionEvents.forEach((event) => {
       window.removeEventListener(event, loadOnInteraction, { passive: true });
     });
 
-    // Load GSAP on interaction
     loadGSAP();
   };
 
-  // Add listeners for first interaction
   interactionEvents.forEach((event) => {
     window.addEventListener(event, loadOnInteraction, { passive: true, once: true });
   });
 
-  // Strategy 2: Fallback - Load during idle time or after delay
-  // This ensures GSAP loads even if user doesn't interact
   if (window.requestIdleCallback) {
     requestIdleCallback(
       () => {
-        // Load during idle time if not already loaded
         if (!hasInteracted) {
           loadGSAP();
         }
       },
-      { timeout: 3000 } // Max 3 seconds wait
+      { timeout: 3000 }
     );
   } else {
-    // Fallback for browsers without requestIdleCallback
     setTimeout(() => {
       if (!hasInteracted) {
         loadGSAP();
       }
-    }, 2000); // Load after 2 seconds if no interaction
+    }, 2000);
   }
 }
 
-/**
- * Additional GSAP global animations
- * Custom GSAP animations that run globally
- */
-let footerScrollTriggerInstance = null;
+function initLocationsTabs() {
+  const section = document.querySelector('[locations-home-tabs]');
+  if (!section) return;
 
-function gsapGlobalAnimations() {
-  const { gsap, ScrollTrigger } = window;
+  const desktopTabBtns = [...section.querySelectorAll('[tab-btn]')];
+  const mobileTabBtns = [
+    ...section.querySelectorAll(
+      '[for-mobile] .contact-grid-locations .contact-grid-locations-text'
+    ),
+  ];
+  const isMobile = window.matchMedia('(max-width: 991px)').matches;
+  const tabBtns =
+    isMobile && mobileTabBtns.length > 0
+      ? mobileTabBtns
+      : desktopTabBtns.length > 0
+        ? desktopTabBtns
+        : mobileTabBtns;
 
-  if (!gsap || !ScrollTrigger) return;
+  const tabImgs = section.querySelectorAll('[tab-img]');
+  const progressLines = section.querySelectorAll('.tabs-progress-line');
+  const locationNames = [...section.querySelectorAll('.location-texts .rotation-text')];
+  const locationTexts = [...section.querySelectorAll('.location-texts-wrap .rotation-text')];
+  const locationTimes = [...section.querySelectorAll('.location-times-wrap .rotation-text')];
+  const dayIcon = section.querySelector('[location-time-comp_icon="day"]');
+  const nightIcon = section.querySelector('[location-time-comp_icon="night"]');
+  const timeIcons = [dayIcon, nightIcon].filter(Boolean);
 
-  footerScroll(gsap, ScrollTrigger);
-}
+  const intervalMs = 5000;
+  const rotateDelayMs = 50;
+  const iconClassDelayMs = 50;
+  const textStaggerMs = 80;
 
-function footerScroll(gsap, ScrollTrigger) {
-  if (footerScrollTriggerInstance) {
-    footerScrollTriggerInstance.kill();
-    footerScrollTriggerInstance = null;
-  }
+  let activeIndex = 0;
+  let timerId = null;
+  let textStaggerIds = [];
+  let iconDelayId = null;
+  let iconClassDelayId = null;
+  let iconRotation = 0;
 
-  const footer2row = document.querySelector('.footer-row-2');
-  if (!footer2row || window.innerWidth <= 991) return;
+  const resetProgress = () => {
+    if (!progressLines.length) return;
+    progressLines.forEach((line) => {
+      line.style.transition = 'none';
+      line.style.width = '0%';
+    });
+    void progressLines[0].offsetWidth; // reflow
+    progressLines.forEach((line) => {
+      line.style.transition = `width ${intervalMs}ms linear`;
+    });
+    requestAnimationFrame(() => {
+      progressLines.forEach((line) => {
+        line.style.width = '100%';
+      });
+    });
+  };
 
-  const footerAnimation = gsap.fromTo(
-    footer2row,
-    { y: '-100%' },
-    {
-      y: '0%',
-      ease: 'linear',
+  const updateTextGroup = (list, prev, next) => {
+    if (!list.length) return;
+    list.forEach((el, i) => {
+      if (i === next) {
+        el.classList.add('in');
+        el.classList.remove('out');
+      } else if (i === prev) {
+        el.classList.remove('in');
+        el.classList.add('out');
+      } else {
+        el.classList.remove('in', 'out');
+      }
+    });
+  };
+
+  const setActive = (index) => {
+    if (!tabBtns.length) return;
+    const prevIndex = activeIndex;
+    activeIndex = (index + tabBtns.length) % tabBtns.length;
+
+    desktopTabBtns.forEach((btn, i) => btn.classList.toggle('active', i === activeIndex));
+    mobileTabBtns.forEach((btn, i) => btn.classList.toggle('active', i === activeIndex));
+
+    if (tabImgs.length) {
+      tabImgs.forEach((img) => {
+        img.classList.remove('active');
+      });
+      tabImgs[activeIndex].classList.add('active');
     }
-  );
 
-  footerScrollTriggerInstance = ScrollTrigger.create({
-    trigger: '.footer-row-2',
-    start: `70% ${window.innerHeight - footer2row.scrollHeight + 200}`,
-    end: `10% ${window.innerHeight - footer2row.scrollHeight - footer2row.scrollHeight}`,
-    animation: footerAnimation,
-    scrub: 2,
-    onStart: () => {
-      ScrollTrigger.refresh();
-    },
-  });
+    textStaggerIds.forEach((id) => clearTimeout(id));
+    textStaggerIds = [];
+    textStaggerIds.push(
+      setTimeout(() => updateTextGroup(locationTexts, prevIndex, activeIndex), 0)
+    );
+    textStaggerIds.push(
+      setTimeout(() => updateTextGroup(locationNames, prevIndex, activeIndex), textStaggerMs)
+    );
+    textStaggerIds.push(
+      setTimeout(() => updateTextGroup(locationTimes, prevIndex, activeIndex), textStaggerMs * 2)
+    );
+
+    const activeTimeEl = locationTimes[activeIndex];
+    const dayNight = activeTimeEl?.getAttribute('data-daynight') || 'day';
+    clearTimeout(iconClassDelayId);
+    iconClassDelayId = setTimeout(() => {
+      if (dayIcon) {
+        dayIcon.classList.toggle('in', dayNight === 'day');
+        dayIcon.classList.toggle('out', dayNight !== 'day');
+      }
+      if (nightIcon) {
+        nightIcon.classList.toggle('in', dayNight === 'night');
+        nightIcon.classList.toggle('out', dayNight !== 'night');
+      }
+    }, iconClassDelayMs);
+
+    clearTimeout(iconDelayId);
+    iconDelayId = setTimeout(() => {
+      if (!timeIcons.length) return;
+      iconRotation += 30;
+      timeIcons.forEach((icon) => {
+        icon.style.transition = 'transform 0.6s ease';
+        icon.style.transform = `rotate(${iconRotation}deg)`;
+      });
+    }, rotateDelayMs);
+
+    window.dispatchEvent(new Event('data-time:refresh'));
+    resetProgress();
+  };
+
+  const startAutoplay = () => {
+    clearInterval(timerId);
+    timerId = setInterval(() => setActive(activeIndex + 1), intervalMs);
+  };
+
+  const bindTabClicks = (btns) => {
+    btns.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        setActive(index);
+        startAutoplay();
+      });
+    });
+  };
+  bindTabClicks(desktopTabBtns);
+  bindTabClicks(mobileTabBtns);
+
+  setActive(0);
+  startAutoplay();
 }

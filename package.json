@@ -20,6 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@barba/core": "^2.9.2",
+    "@rive-app/canvas-advanced": "2.35.0",
     "@studio-freight/lenis": "^1.0.42"
   },
   "devDependencies": {

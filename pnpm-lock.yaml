@@ -11,6 +11,9 @@ importers:
       '@barba/core':
         specifier: ^2.9.2
         version: 2.10.3
+      '@rive-app/canvas-advanced':
+        specifier: 2.35.0
+        version: 2.35.0
       '@studio-freight/lenis':
         specifier: ^1.0.42
         version: 1.0.42
@@ -223,6 +226,9 @@ packages:
   '@pkgr/core@0.2.9':
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@rive-app/canvas-advanced@2.35.0':
+    resolution: {integrity: sha512-qQMAhchTVdI1U8HbOeFcryB2O/oZaJmL0SohP57Wny5txPQ5aMIXP4PiHU7FjaiKBgEz/nB6eRJe+LRUsKGkNA==}
 
   '@studio-freight/lenis@1.0.42':
     resolution: {integrity: sha512-HJAGf2DeM+BTvKzHv752z6Z7zy6bA643nZM7W88Ft9tnw2GsJSp6iJ+3cekjyMIWH+cloL2U9X82dKXgdU8kPg==}
@@ -1377,6 +1383,8 @@ snapshots:
       fastq: 1.19.1
 
   '@pkgr/core@0.2.9': {}
+
+  '@rive-app/canvas-advanced@2.35.0': {}
 
   '@studio-freight/lenis@1.0.42': {}
 

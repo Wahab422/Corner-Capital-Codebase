@@ -13,12 +13,22 @@ import { logger } from './utils/logger';
 const pageRegistry = {
   home: () => import('./pages/home').then((m) => m.initHomePage),
   about: () => import('./pages/about').then((m) => m.initAboutPage),
+  contact: () => import('./pages/contact').then((m) => m.initContactPage),
+  solutions: () => import('./pages/solutions').then((m) => m.initSolutionsPage),
+  incubation: () => import('./pages/incubation').then((m) => m.initIncubationPage),
+  investmentApproach: () =>
+    import('./pages/InvestmentApproach').then((m) => m.initInvestmentApproachPage),
 };
 
 // Cleanup registry - map page names to their cleanup functions (for Barba transitions)
 const pageCleanupRegistry = {
   home: () => import('./pages/home').then((m) => m.cleanupHomePage),
   about: () => import('./pages/about').then((m) => m.cleanupAboutPage),
+  contact: () => import('./pages/contact').then((m) => m.cleanupContactPage),
+  solutions: () => import('./pages/solutions').then((m) => m.cleanupSolutionsPage),
+  incubation: () => import('./pages/incubation').then((m) => m.cleanupIncubationPage),
+  investmentApproach: () =>
+    import('./pages/InvestmentApproach').then((m) => m.cleanupInvestmentApproachPage),
 };
 
 // Dev-time check: ensure every page has both init and cleanup registered
@@ -150,6 +160,7 @@ function bootstrap() {
       '[Webflow Router] Barba enabled but wrapper/container not found; running static mode'
     );
   }
+  // Static mode or Barba markup missing: run init once
   initPage()
     .then(() => {
       document.documentElement.classList.remove('is-transitioning');

@@ -1,8 +1,3 @@
-/**
- * Barba.js integration for SPA-like page transitions
- * Matches reference: init in hooks.after, enter/once fire-and-forget, same animation style.
- */
-
 import barba from '@barba/core';
 import { getCurrentPage, clearPageCache, initPage, runPageCleanup } from './index';
 import { initGlobal } from './global';
@@ -13,7 +8,6 @@ import { logger } from './utils/logger';
 const WRAPPER_SELECTOR = '[data-barba="wrapper"]';
 const html = document.documentElement;
 
-/** Cached wrapper element (same node across transitions; avoids repeated querySelector) */
 let cachedWrapper = null;
 
 function getWrapper() {
@@ -22,9 +16,6 @@ function getWrapper() {
   return cachedWrapper;
 }
 
-/**
- * Enter: fade in new container (reference pattern – gsap.from, then resize + refresh)
- */
 function animationEnter(container) {
   const gsap = window.gsap;
   if (!gsap || !container) return Promise.resolve();
@@ -44,9 +35,6 @@ function animationEnter(container) {
     });
 }
 
-/**
- * Leave: fade out current container (reference pattern)
- */
 function animationLeave(container) {
   const gsap = window.gsap;
   if (!gsap || !container) return Promise.resolve();
@@ -58,12 +46,6 @@ function animationLeave(container) {
   });
 }
 
-/**
- * Run full init after transition: set page, initGlobal, initPage, scroll, classes, Lenis.
- * Used both on initial load (once) and after page-to-page transitions (hooks.after).
- * @param {Element} container - The new page container (data-barba="container")
- * @param {{ isPageTransition?: boolean }} [options] - Set isPageTransition: true when called from hooks.after so SplitText/GSAP re-run on the new container
- */
 async function runInitAfterTransition(container, options = {}) {
   const { isPageTransition = false } = options;
 
@@ -125,7 +107,6 @@ export function initBarba() {
             });
           }
           await animationEnter(data.next.container);
-          // Run init on initial load so reload works (hooks.after may not run after once)
           await runInitAfterTransition(data.next.container);
         },
 
@@ -151,6 +132,8 @@ export function initBarba() {
     const wrapper = getWrapper();
     if (wrapper) wrapper.style.overflow = 'hidden';
     stopLenis();
+    // Scroll to top at the start of every transition so the new page always lands at top
+    window.scrollTo(0, 0);
   });
 
   barba.hooks.afterLeave(() => {
