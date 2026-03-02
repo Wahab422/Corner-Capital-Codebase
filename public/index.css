@@ -1,0 +1,1 @@
+[data-accordion-list=css] [data-accordion-body]{display:grid;grid-template-rows:0fr;transition:grid-template-rows .6s cubic-bezier(.625,.05,0,1)}[data-accordion-list=css] [data-accordion=active] [data-accordion-body]{grid-template-rows:1fr!important}.modal[data-modal-group-status=active]{opacity:1;visibility:visible}.line-wrap{overflow:hidden}

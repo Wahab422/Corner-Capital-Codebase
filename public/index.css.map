@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/index.css"],
+  "sourcesContent": ["/* \r\n * Global stylesheet entry point.\r\n * Bundled to public/index.css so you can reference it locally:\r\n * <link rel=\"stylesheet\" href=\"http://localhost:3000/index.css\">\r\n *\r\n * Add your site-wide styles below.\r\n */\r\n\r\n/* Accordions CSS */\r\n[data-accordion-list='css'] [data-accordion-body] {\r\n  display: grid;\r\n  grid-template-rows: 0fr;\r\n  transition: grid-template-rows 0.6s cubic-bezier(0.625, 0.05, 0, 1);\r\n}\r\n\r\n[data-accordion-list='css'] [data-accordion='active'] [data-accordion-body] {\r\n  grid-template-rows: 1fr !important;\r\n}\r\n\r\n/* Modals CSS */\r\n.modal[data-modal-group-status='active'] {\r\n  opacity: 1;\r\n  visibility: visible;\r\n}\r\n\r\n\r\n.line-wrap{overflow: hidden;}"],
+  "mappings": ";AASA,CAAC,yBAA2B,CAAC;AAC3B,WAAS;AACT,sBAAoB;AACpB,cAAY,mBAAmB,KAAK,aAAa,KAAK,EAAE,IAAI,EAAE,CAAC,EAAE;AACnE;AAEA,CAAC,yBAA2B,CAAC,uBAAyB,CAAC;AACrD,sBAAoB;AACtB;AAGA,CAAC,KAAK,CAAC;AACL,WAAS;AACT,cAAY;AACd;AAGA,CAAC;AAAU,YAAU;AAAO;",
+  "names": []
+}
