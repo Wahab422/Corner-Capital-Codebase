@@ -1,3 +1,3 @@
 export const config = {
-  enableBarba: true,
+  enableBarba: false,
 };

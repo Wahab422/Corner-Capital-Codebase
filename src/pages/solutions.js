@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { ensureGSAPLoaded } from '../components/gsap';
 import { initCarousel, getCarouselInstance } from '../components/carousel';
 import { initTabs } from '../components/tabs/tabsComp1';
+import { initRive } from '../components/rive';
 
 const cleanupFunctions = [];
 
@@ -13,6 +14,8 @@ export async function initSolutionsPage() {
     initCarousel();
     await initStickySliderScrollLock();
     initTabs();
+    const riveCleanup = initRive({ onInteraction: false });
+    if (typeof riveCleanup === 'function') cleanupFunctions.push(riveCleanup);
   } catch (error) {
     handleError(error, 'Solutions Page Initialization');
   }

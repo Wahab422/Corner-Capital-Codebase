@@ -7113,6 +7113,9 @@
       initCarousel();
       await initStickySliderScrollLock2();
       initTabs();
+      const riveCleanup = initRive({ onInteraction: false });
+      if (typeof riveCleanup === "function")
+        cleanupFunctions6.push(riveCleanup);
     } catch (error) {
       handleError(error, "Solutions Page Initialization");
     }
@@ -7182,6 +7185,7 @@
       init_gsap();
       init_carousel();
       init_tabsComp1();
+      init_rive();
       cleanupFunctions6 = [];
     }
   });
@@ -9314,6 +9318,48 @@
   __export(barba_exports, {
     initBarba: () => initBarba
   });
+  function updateNavCurrentState(pageName) {
+    if (typeof document === "undefined")
+      return;
+    const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+    const pathNorm = pathname.replace(/\/$/, "") || "/";
+    document.body.setAttribute("data-current-page", pageName || "");
+    document.querySelectorAll("li.w--current, a.w--current").forEach((el) => {
+      el.classList.remove(CURRENT_CLASS);
+      el.removeAttribute("aria-current");
+    });
+    const allNavLinks = document.querySelectorAll(NAV_LINK_SELECTOR);
+    function setCurrent(el) {
+      if (!el)
+        return;
+      el.classList.add(CURRENT_CLASS);
+      el.setAttribute("aria-current", "page");
+    }
+    let currentLink = pageName ? document.querySelector(`a[data-nav-link="${pageName}"]`) : null;
+    if (!currentLink) {
+      for (const link of allNavLinks) {
+        const href = link.getAttribute("href");
+        if (href === pathname || href === pathNorm) {
+          currentLink = link;
+          break;
+        }
+        try {
+          const url = new URL(link.href, window.location.origin);
+          if (url.pathname.replace(/\/$/, "") === pathNorm) {
+            currentLink = link;
+            break;
+          }
+        } catch (_) {
+        }
+      }
+    }
+    if (currentLink) {
+      setCurrent(currentLink);
+      const parent = currentLink.closest("li") || currentLink.parentElement;
+      if (parent)
+        setCurrent(parent);
+    }
+  }
   function getWrapper() {
     if (cachedWrapper && document.contains(cachedWrapper))
       return cachedWrapper;
@@ -9325,10 +9371,12 @@
     if (!gsap2 || !container)
       return Promise.resolve();
     return gsap2.from(container, {
-      duration: 0.2,
-      opacity: 0,
-      ease: "none",
-      clearProps: "all"
+      rotationZ: "-90deg",
+      y: "10vh",
+      duration: 1,
+      ease: "power2.inOut",
+      clearProps: "all",
+      transformOrigin: "top right"
     }).then(() => {
       const lenis2 = getLenis();
       if (lenis2 && typeof lenis2.resize === "function") {
@@ -9355,6 +9403,7 @@
       document.body.setAttribute("data-page", pageName);
     }
     clearPageCache();
+    updateNavCurrentState(pageName || document.body.getAttribute("data-page"));
     if (isPageTransition) {
       resetGSAPForNewPage();
     }
@@ -9447,7 +9496,7 @@
     });
     logger.log("[Barba] Page transitions enabled");
   }
-  var import_core, WRAPPER_SELECTOR, html, cachedWrapper;
+  var import_core, WRAPPER_SELECTOR, html, NAV_LINK_SELECTOR, CURRENT_CLASS, cachedWrapper;
   var init_barba = __esm({
     "src/barba.js"() {
       import_core = __toESM(require_barba_umd());
@@ -9458,6 +9507,8 @@
       init_logger();
       WRAPPER_SELECTOR = '[data-barba="wrapper"]';
       html = document.documentElement;
+      NAV_LINK_SELECTOR = "[nav] a[href], [data-navbar] a[href], a[data-nav-link]";
+      CURRENT_CLASS = "w--current";
       cachedWrapper = null;
     }
   });

@@ -8,7 +8,65 @@ import { logger } from './utils/logger';
 const WRAPPER_SELECTOR = '[data-barba="wrapper"]';
 const html = document.documentElement;
 
+/** Webflow nav: links inside [nav] or [data-navbar], or with data-nav-link; w--current goes on parent li */
+const NAV_LINK_SELECTOR = '[nav] a[href], [data-navbar] a[href], a[data-nav-link]';
+const CURRENT_CLASS = 'w--current';
+
 let cachedWrapper = null;
+
+/**
+ * Updates Webflow nav state after page change: sets data-current-page on body,
+ * and ensures exactly one nav item (link + its parent li) has w--current + aria-current="page".
+ * Webflow expects these on the <li> (e.g. .menu-list-item.w--current), so we update both link and parent.
+ */
+function updateNavCurrentState(pageName) {
+  if (typeof document === 'undefined') return;
+
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const pathNorm = pathname.replace(/\/$/, '') || '/';
+
+  document.body.setAttribute('data-current-page', pageName || '');
+
+  // Clear from all elements that might have current state (both <li> and <a> in nav)
+  document.querySelectorAll('li.w--current, a.w--current').forEach((el) => {
+    el.classList.remove(CURRENT_CLASS);
+    el.removeAttribute('aria-current');
+  });
+
+  const allNavLinks = document.querySelectorAll(NAV_LINK_SELECTOR);
+
+  function setCurrent(el) {
+    if (!el) return;
+    el.classList.add(CURRENT_CLASS);
+    el.setAttribute('aria-current', 'page');
+  }
+
+  // Prefer match by data-nav-link (must match data-page, e.g. "about")
+  let currentLink = pageName ? document.querySelector(`a[data-nav-link="${pageName}"]`) : null;
+
+  if (!currentLink) {
+    for (const link of allNavLinks) {
+      const href = link.getAttribute('href');
+      if (href === pathname || href === pathNorm) {
+        currentLink = link;
+        break;
+      }
+      try {
+        const url = new URL(link.href, window.location.origin);
+        if (url.pathname.replace(/\/$/, '') === pathNorm) {
+          currentLink = link;
+          break;
+        }
+      } catch (_) {}
+    }
+  }
+
+  if (currentLink) {
+    setCurrent(currentLink);
+    const parent = currentLink.closest('li') || currentLink.parentElement;
+    if (parent) setCurrent(parent);
+  }
+}
 
 function getWrapper() {
   if (cachedWrapper && document.contains(cachedWrapper)) return cachedWrapper;
@@ -21,10 +79,12 @@ function animationEnter(container) {
   if (!gsap || !container) return Promise.resolve();
   return gsap
     .from(container, {
-      duration: 0.2,
-      opacity: 0,
-      ease: 'none',
+      rotationZ: '-90deg',
+      y: '10vh',
+      duration: 1,
+      ease: 'power2.inOut',
       clearProps: 'all',
+      transformOrigin: 'top right',
     })
     .then(() => {
       const lenis = getLenis();
@@ -54,6 +114,8 @@ async function runInitAfterTransition(container, options = {}) {
     document.body.setAttribute('data-page', pageName);
   }
   clearPageCache();
+
+  updateNavCurrentState(pageName || document.body.getAttribute('data-page'));
 
   if (isPageTransition) {
     resetGSAPForNewPage();
