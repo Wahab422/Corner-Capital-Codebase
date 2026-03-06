@@ -6,6 +6,9 @@ import { logger } from '../utils/logger';
 
 const navbarCleanupFunctions = [];
 
+/** Cleanup for locations-home-tabs (intervals, timeouts, click listeners). Called before re-init or when section is gone. */
+let locationsTabsCleanup = null;
+
 function initNavbar() {
   logger.log('📱 Navbar initialized');
 
@@ -184,6 +187,11 @@ function initLocationsTabs() {
   const section = document.querySelector('[locations-home-tabs]');
   if (!section) return;
 
+  if (locationsTabsCleanup) {
+    locationsTabsCleanup();
+    locationsTabsCleanup = null;
+  }
+
   const desktopTabBtns = [...section.querySelectorAll('[tab-btn]')];
   const mobileTabBtns = [
     ...section.querySelectorAll(
@@ -225,12 +233,9 @@ function initLocationsTabs() {
       line.style.transition = 'none';
       line.style.width = '0%';
     });
-    void progressLines[0].offsetWidth; // reflow
-    progressLines.forEach((line) => {
-      line.style.transition = `width ${intervalMs}ms linear`;
-    });
     requestAnimationFrame(() => {
       progressLines.forEach((line) => {
+        line.style.transition = `width ${intervalMs}ms linear`;
         line.style.width = '100%';
       });
     });
@@ -311,12 +316,15 @@ function initLocationsTabs() {
     timerId = setInterval(() => setActive(activeIndex + 1), intervalMs);
   };
 
+  const tabClickCleanups = [];
   const bindTabClicks = (btns) => {
     btns.forEach((btn, index) => {
-      btn.addEventListener('click', () => {
+      const handler = () => {
         setActive(index);
         startAutoplay();
-      });
+      };
+      btn.addEventListener('click', handler);
+      tabClickCleanups.push({ btn, handler });
     });
   };
   bindTabClicks(desktopTabBtns);
@@ -324,4 +332,21 @@ function initLocationsTabs() {
 
   setActive(0);
   startAutoplay();
+
+  locationsTabsCleanup = () => {
+    if (timerId) clearInterval(timerId);
+    timerId = null;
+    textStaggerIds.forEach((id) => clearTimeout(id));
+    textStaggerIds = [];
+    if (iconDelayId) clearTimeout(iconDelayId);
+    iconDelayId = null;
+    if (iconClassDelayId) clearTimeout(iconClassDelayId);
+    iconClassDelayId = null;
+    tabClickCleanups.forEach(({ btn, handler }) => {
+      try {
+        btn.removeEventListener('click', handler);
+      } catch (_) {}
+    });
+    tabClickCleanups.length = 0;
+  };
 }

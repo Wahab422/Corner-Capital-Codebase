@@ -1,15 +1,19 @@
 import { logger } from '../utils/logger';
 
-/**
- * Lenis Smooth Scroll
- * Premium smooth scroll library for buttery-smooth scrolling
- * Performance optimized: Loads only on first user interaction
- * Documentation: https://github.com/studio-freight/lenis
- */
-
 let lenis = null;
 let lenisLoaded = false;
 let lenisImport = null;
+
+/** Cached navbar element for scroll offset. Invalidated when not in document. */
+let cachedNavbar = null;
+
+function getNavbarOffset() {
+  if (cachedNavbar && document.contains(cachedNavbar)) {
+    return cachedNavbar.offsetHeight;
+  }
+  cachedNavbar = document.querySelector('[data-navbar]');
+  return cachedNavbar ? cachedNavbar.offsetHeight : 0;
+}
 
 /**
  * Actually initialize Lenis (called after first interaction)
@@ -48,47 +52,32 @@ async function actuallyInitLenis() {
 
     logger.log('✅ Lenis smooth scroll ready');
 
-    // Handle anchor links (Performance optimized with event delegation)
+    // Single delegated click handler: anchor links + [data-scroll-to] (cached navbar offset)
     document.addEventListener(
       'click',
       (e) => {
         if (!lenis) return;
+
         const anchor = e.target.closest('a[href^="#"]');
-        if (!anchor) return;
-
-        const href = anchor.getAttribute('href');
-
-        // Skip empty anchors
-        if (href === '#' || href === '#!') return;
-
-        const target = document.querySelector(href);
-        if (target) {
-          e.preventDefault();
-
-          // Get navbar height for offset (cached if navbar exists)
-          const navbar = document.querySelector('[data-navbar]');
-          const offset = navbar ? navbar.offsetHeight : 0;
-
-          // Scroll to target with Lenis
-          lenis.scrollTo(target, {
-            offset: -offset,
-            duration: 1.2,
-          });
+        if (anchor) {
+          const href = anchor.getAttribute('href');
+          if (href === '#' || href === '#!') return;
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            lenis.scrollTo(target, {
+              offset: -getNavbarOffset(),
+              duration: 1.2,
+            });
+          }
+          return;
         }
-      },
-      { passive: false } // Can't be passive because we preventDefault
-    );
 
-    // Handle data-scroll-to buttons (Performance optimized with event delegation)
-    document.addEventListener(
-      'click',
-      (e) => {
-        if (!lenis) return;
-        const button = e.target.closest('[data-scroll-to]');
-        if (!button) return;
+        const scrollToBtn = e.target.closest('[data-scroll-to]');
+        if (!scrollToBtn) return;
 
         e.preventDefault();
-        const target = button.getAttribute('data-scroll-to');
+        const target = scrollToBtn.getAttribute('data-scroll-to');
 
         if (target === 'top') {
           lenis.scrollTo(0, { duration: 1.2 });
@@ -97,16 +86,14 @@ async function actuallyInitLenis() {
         } else if (target.startsWith('#')) {
           const element = document.querySelector(target);
           if (element) {
-            const navbar = document.querySelector('[data-navbar]');
-            const offset = navbar ? navbar.offsetHeight : 0;
             lenis.scrollTo(element, {
-              offset: -offset,
+              offset: -getNavbarOffset(),
               duration: 1.2,
             });
           }
         }
       },
-      { passive: false } // Can't be passive because we preventDefault
+      { passive: false }
     );
   } catch (error) {
     logger.error('Error loading Lenis:', error);
@@ -169,8 +156,7 @@ export function scrollTo(target, options = {}) {
   const element = typeof target === 'string' ? document.querySelector(target) : target;
 
   if (element) {
-    const navbar = document.querySelector('[data-navbar]');
-    const defaultOffset = navbar ? -navbar.offsetHeight : 0;
+    const defaultOffset = -getNavbarOffset();
 
     lenis.scrollTo(element, {
       offset: defaultOffset,

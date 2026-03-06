@@ -4,11 +4,14 @@
  * Performance optimized with cleanup and throttling
  */
 
-import { rafThrottle, handleError, backToTop } from '../utils/helpers';
+import { handleError } from '../utils/helpers';
 import { logger } from '../utils/logger';
 
 // Store cleanup functions for footer
 const cleanupFunctions = [];
+
+/** Cleanup for clip-slider-section (interval + timeouts). Run before re-init. */
+let footerLocationsCleanup = null;
 
 export function initFooter() {
   logger.log('🦶 Footer initialized');
@@ -34,6 +37,12 @@ export function cleanupFooter() {
 export function handleLocationsection() {
   const section = document.querySelector('#clip-slider-section');
   if (!section) return;
+
+  if (footerLocationsCleanup) {
+    footerLocationsCleanup();
+    footerLocationsCleanup = null;
+  }
+
   const slides = Array.from(section.querySelectorAll('.clip-slide'));
 
   const locationNames = [...section.querySelectorAll('.location-texts .rotation-text')];
@@ -135,11 +144,24 @@ export function handleLocationsection() {
     runLocationAnimations(prevIndex, activeIndex);
   }
 
-  setInterval(() => {
+  const intervalId = setInterval(() => {
     const prev = activeIndex;
     activeIndex = (activeIndex + 1) % slides.length;
     updateStates(prev);
   }, 5000);
 
   updateStates();
+
+  footerLocationsCleanup = () => {
+    clearInterval(intervalId);
+    textStaggerIds.forEach((id) => clearTimeout(id));
+    textStaggerIds = [];
+    if (iconDelayId) clearTimeout(iconDelayId);
+    iconDelayId = null;
+    if (iconClassDelayId) clearTimeout(iconClassDelayId);
+    iconClassDelayId = null;
+    if (zTimeout) clearTimeout(zTimeout);
+    zTimeout = null;
+  };
+  cleanupFunctions.push(footerLocationsCleanup);
 }
