@@ -17,6 +17,22 @@ export async function initHomePage() {
   logger.log('🏠 Home page initialized');
 
   try {
+    await ensureGSAPLoaded();
+    const gsap = window.gsap;
+    if (gsap) {
+      gsap.to('.home-hero-body', {
+        opacity: 0,
+        duration: 1,
+        ease: 'power2.inOut',
+        scrollTrigger: {
+          trigger: '#home-hero-section',
+          start: '70% 20%',
+          end: 'bottom 20%',
+          scrub: true,
+        },
+      });
+    }
+
     initHeroAnimation();
     initCarousel();
     await initGlobalChampionScrollLock();

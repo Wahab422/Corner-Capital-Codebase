@@ -146,10 +146,12 @@ function bootstrap() {
     const wrapper = document.querySelector('[data-barba="wrapper"]');
     const container = document.querySelector('[data-barba="container"]');
     if (wrapper && container) {
+      document.body.style.opacity = '0';
       import('./barba')
         .then((m) => m.initBarba())
         .catch((err) => {
           logger.error('[Webflow Router] Failed to load Barba:', err);
+          document.body.style.opacity = '';
           document.documentElement.classList.remove('is-transitioning');
           document.documentElement.classList.add('ready');
           initPage();

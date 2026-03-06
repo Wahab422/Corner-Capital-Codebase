@@ -1,10 +1,62 @@
-
-
-import { initLenis } from './lenis';
-import { initNavbar, cleanupNavbar } from './navbar';
+import { initLenis, stopLenis, startLenis } from './lenis';
 import { initFooter, cleanupFooter } from './footer';
 import { handleGlobalAnimation, ensureGSAPLoaded } from '../components/gsap';
+import { handleError } from '../utils/helpers';
 import { logger } from '../utils/logger';
+
+const navbarCleanupFunctions = [];
+
+function initNavbar() {
+  logger.log('📱 Navbar initialized');
+
+  try {
+    (() => {
+      const menuBtn = document.querySelector('[menu-btn]');
+      const nav = document.querySelector('[nav]');
+      if (menuBtn && nav) {
+        const menuLinksList = document.querySelector('.menu-links-list');
+
+        const closeMenu = () => {
+          nav.classList.remove('open');
+        };
+
+        const handleMenuBtnClick = () => {
+          nav.classList.toggle('open');
+        };
+
+        menuBtn.addEventListener('click', handleMenuBtnClick);
+        navbarCleanupFunctions.push(() => {
+          menuBtn.removeEventListener('click', handleMenuBtnClick);
+        });
+
+        if (menuLinksList) {
+          const menuLinks = menuLinksList.querySelectorAll('a');
+          const handleMenuLinkClick = () => closeMenu();
+          menuLinks.forEach((link) => link.addEventListener('click', handleMenuLinkClick));
+          navbarCleanupFunctions.push(() => {
+            menuLinks.forEach((link) => link.removeEventListener('click', handleMenuLinkClick));
+          });
+        }
+      }
+    })();
+
+    // home hero body text animation
+
+  } catch (error) {
+    handleError(error, 'Navbar Initialization');
+  }
+}
+
+function cleanupNavbar() {
+  navbarCleanupFunctions.forEach((cleanup) => {
+    try {
+      cleanup();
+    } catch (error) {
+      handleError(error, 'Navbar Cleanup');
+    }
+  });
+  navbarCleanupFunctions.length = 0;
+}
 
 export async function initGlobal() {
   logger.log('🌐 Initializing global components...');

@@ -3,6 +3,7 @@ import { getCurrentPage, clearPageCache, initPage, runPageCleanup } from './inde
 import { initGlobal } from './global';
 import { getLenis, stopLenis, startLenis } from './global/lenis';
 import { ensureGSAPLoaded, refreshScrollTrigger, resetGSAPForNewPage } from './components/gsap';
+import { ensureFinsweetLoaded, runPostTransitionReinit } from './integrations/webflow-barba';
 import { logger } from './utils/logger';
 
 const WRAPPER_SELECTOR = '[data-barba="wrapper"]';
@@ -79,8 +80,7 @@ function animationEnter(container) {
   if (!gsap || !container) return Promise.resolve();
   return gsap
     .from(container, {
-      rotationZ: '-90deg',
-      y: '10vh',
+      opacity: 1,
       duration: 1,
       ease: 'power2.inOut',
       clearProps: 'all',
@@ -131,7 +131,7 @@ async function runInitAfterTransition(container, options = {}) {
       lenis.scrollTo(0, { duration: 0 });
     }
     await initPage(pageName || undefined, { skipGlobal: true });
-    refreshScrollTrigger();
+    runPostTransitionReinit();
   } catch (err) {
     logger.error('[Barba] Error in runInitAfterTransition:', err);
   } finally {
@@ -151,6 +151,7 @@ export function initBarba() {
 
   barba.init({
     preventRunning: true,
+    prevent: ({ el }) => Boolean(el?.closest?.('.w-pagination-wrapper')),
 
     transitions: [
       {
@@ -217,5 +218,6 @@ export function initBarba() {
     }
   });
 
+  ensureFinsweetLoaded().catch(() => {});
   logger.log('[Barba] Page transitions enabled');
 }

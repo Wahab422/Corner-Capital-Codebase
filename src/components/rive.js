@@ -297,17 +297,33 @@ async function initRiveScrub(el) {
   let intersectionObserver = null;
 
   const SCROLL_TRIGGER_THRESHOLD = 0.05;
+  /** Throttle scrub draws to ~30fps and skip when progress unchanged to reduce lag */
+  const SCRUB_DRAW_INTERVAL_MS = 33;
+  const SCRUB_PROGRESS_EPSILON = 0.002;
+  let lastScrubDrawTime = 0;
+  let lastScrubProgress = -1;
+  let lastHybridScrollProgress = -1;
 
   const onResize = () => {
     if (!canvas || !renderer) return;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(1, Math.round(rect.width * dpr) || DEFAULT_CANVAS_WIDTH);
-    const h = Math.max(1, Math.round(rect.height * dpr) || DEFAULT_CANVAS_HEIGHT);
+    // Cap DPR on mobile to reduce GPU load and jitter (many devices report 2–3)
+    const cappedDpr =
+      typeof window.matchMedia !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
+        ? Math.min(dpr, 2)
+        : dpr;
+    const w = Math.max(1, Math.round(rect.width * cappedDpr) || DEFAULT_CANVAS_WIDTH);
+    const h = Math.max(1, Math.round(rect.height * cappedDpr) || DEFAULT_CANVAS_HEIGHT);
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
     }
+  };
+
+  /** Call onResize only when canvas has no valid size (e.g. initial layout). Avoid calling every frame to prevent mobile jitter. */
+  const ensureCanvasSize = () => {
+    if (canvas && (canvas.width < 1 || canvas.height < 1)) onResize();
   };
 
   /** @type {number[]} */
@@ -410,7 +426,7 @@ async function initRiveScrub(el) {
       window.addEventListener('keydown', keyLockHandler);
 
       const tick = (time) => {
-        onResize();
+        ensureCanvasSize();
         if (canvas.width < 1 || canvas.height < 1) {
           rafId = rive.requestAnimationFrame(tick);
           return;
@@ -477,55 +493,73 @@ async function initRiveScrub(el) {
             scrollProgress = 0;
           }
 
-          for (const i of autoplayIndices) {
-            const inst = animationInstances[i];
-            const override = getDurationForIndex(durationOverride, i);
-            setTimePercentage(inst, artboard, 1, override);
-          }
-          // data-rive-scroll-animation: play over time when user scrolls
-          if (scrollIndices.length === 1) {
-            const i = scrollIndices[0];
-            setTimePercentage(
-              animationInstances[i],
-              artboard,
-              scrollProgress,
-              getDurationForIndex(durationOverride, i)
-            );
-          } else if (scrollIndices.length > 1) {
-            const scrollInstances = scrollIndices.map((i) => animationInstances[i]);
-            const scrollDurationOverride = scrollIndices.map((i) =>
-              getDurationForIndex(durationOverride, i)
-            );
-            setTimePercentageSequence(
-              scrollInstances,
-              artboard,
-              scrollProgress,
-              scrollDurationOverride.length ? scrollDurationOverride : null
-            );
-          }
-          // data-rive-scrub-animation: driven by scroll position
-          if (scrubIndices.length === 1) {
-            const i = scrubIndices[0];
-            setTimePercentage(
-              animationInstances[i],
-              artboard,
-              scrubProgress,
-              getDurationForIndex(durationOverride, i)
-            );
-          } else if (scrubIndices.length > 1) {
-            const scrubInstances = scrubIndices.map((i) => animationInstances[i]);
-            const scrubDurationOverride = scrubIndices.map((i) =>
-              getDurationForIndex(durationOverride, i)
-            );
-            setTimePercentageSequence(
-              scrubInstances,
-              artboard,
-              scrubProgress,
-              scrubDurationOverride.length ? scrubDurationOverride : null
-            );
+          const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          const scrubChanged = Math.abs(scrubProgress - lastScrubProgress) > SCRUB_PROGRESS_EPSILON;
+          const scrollChanged =
+            scrollIndices.length > 0 &&
+            Math.abs(scrollProgress - lastHybridScrollProgress) > SCRUB_PROGRESS_EPSILON;
+          const throttleElapsed = now - lastScrubDrawTime >= SCRUB_DRAW_INTERVAL_MS;
+          const shouldDraw =
+            throttleElapsed || scrubChanged || scrollChanged || lastScrubProgress < 0;
+
+          if (shouldDraw) {
+            lastScrubDrawTime = now;
+            lastScrubProgress = scrubProgress;
+            lastHybridScrollProgress = scrollProgress;
+
+            for (const i of autoplayIndices) {
+              const inst = animationInstances[i];
+              const override = getDurationForIndex(durationOverride, i);
+              setTimePercentage(inst, artboard, 1, override);
+            }
+            // data-rive-scroll-animation: play over time when user scrolls
+            if (scrollIndices.length === 1) {
+              const i = scrollIndices[0];
+              setTimePercentage(
+                animationInstances[i],
+                artboard,
+                scrollProgress,
+                getDurationForIndex(durationOverride, i)
+              );
+            } else if (scrollIndices.length > 1) {
+              const scrollInstances = scrollIndices.map((i) => animationInstances[i]);
+              const scrollDurationOverride = scrollIndices.map((i) =>
+                getDurationForIndex(durationOverride, i)
+              );
+              setTimePercentageSequence(
+                scrollInstances,
+                artboard,
+                scrollProgress,
+                scrollDurationOverride.length ? scrollDurationOverride : null
+              );
+            }
+            // data-rive-scrub-animation: driven by scroll position
+            if (scrubIndices.length === 1) {
+              const i = scrubIndices[0];
+              setTimePercentage(
+                animationInstances[i],
+                artboard,
+                scrubProgress,
+                getDurationForIndex(durationOverride, i)
+              );
+            } else if (scrubIndices.length > 1) {
+              const scrubInstances = scrubIndices.map((i) => animationInstances[i]);
+              const scrubDurationOverride = scrubIndices.map((i) =>
+                getDurationForIndex(durationOverride, i)
+              );
+              setTimePercentageSequence(
+                scrubInstances,
+                artboard,
+                scrubProgress,
+                scrubDurationOverride.length ? scrubDurationOverride : null
+              );
+            }
+            drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : undefined);
           }
         }
-        drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : undefined);
+        if (!autoplayDone) {
+          drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : undefined);
+        }
         rafId = rive.requestAnimationFrame(tick);
       };
       rafId = rive.requestAnimationFrame(tick);
@@ -555,7 +589,7 @@ async function initRiveScrub(el) {
       isInView = rect.top < vh && rect.bottom > 0;
 
       const tick = (time) => {
-        onResize();
+        ensureCanvasSize();
         if (canvas.width < 1 || canvas.height < 1) {
           rafId = rive.requestAnimationFrame(tick);
           return;
@@ -597,18 +631,31 @@ async function initRiveScrub(el) {
       });
 
       const scrubTick = () => {
-        onResize();
+        ensureCanvasSize();
         if (canvas.width < 1 || canvas.height < 1) {
           rafId = rive.requestAnimationFrame(scrubTick);
           return;
         }
-        if (animationInstances.length === 1) {
-          const singleOverride = getDurationForIndex(durationOverride, 0);
-          setTimePercentage(animationInstances[0], artboard, scrollProgress, singleOverride);
-        } else {
-          setTimePercentageSequence(animationInstances, artboard, scrollProgress, durationOverride);
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const progressChanged =
+          Math.abs(scrollProgress - lastScrubProgress) > SCRUB_PROGRESS_EPSILON;
+        const throttleElapsed = now - lastScrubDrawTime >= SCRUB_DRAW_INTERVAL_MS;
+        if (progressChanged || throttleElapsed || lastScrubProgress < 0) {
+          lastScrubDrawTime = now;
+          lastScrubProgress = scrollProgress;
+          if (animationInstances.length === 1) {
+            const singleOverride = getDurationForIndex(durationOverride, 0);
+            setTimePercentage(animationInstances[0], artboard, scrollProgress, singleOverride);
+          } else {
+            setTimePercentageSequence(
+              animationInstances,
+              artboard,
+              scrollProgress,
+              durationOverride
+            );
+          }
+          drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : undefined);
         }
-        drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : undefined);
         rafId = rive.requestAnimationFrame(scrubTick);
       };
       rafId = rive.requestAnimationFrame(scrubTick);

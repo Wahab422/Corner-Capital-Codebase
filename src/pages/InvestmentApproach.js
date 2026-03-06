@@ -193,33 +193,7 @@ function setupTriggers() {
  * Registers a Finsweet list callback to sync the clear button's is-list-active
  * class with the radio filter state. Runs when Finsweet's list attribute loads.
  */
-function setupFinsweetListClear() {
-  if (typeof window === 'undefined') return;
 
-  const clearBtn = document.querySelector('[fs-list-element="clear"]');
-  const radio = document.querySelector('#exited-radio');
-
-  const updateClearState = () => {
-    const isChecked = radio.checked && radio.getAttribute('fs-list-field');
-    if (isChecked) {
-      clearBtn.classList.remove('is-list-active');
-    } else {
-      clearBtn.classList.add('is-list-active');
-    }
-  };
-
-  window.FinsweetAttributes = window.FinsweetAttributes || [];
-  window.FinsweetAttributes.push([
-    'list',
-    (listInstances) => {
-      if (!listInstances?.length) return;
-
-      const [listInstance] = listInstances;
-      listInstance.addHook('filter', updateClearState);
-      updateClearState();
-    },
-  ]);
-}
 
 export async function initInvestmentApproachPage() {
   logger.log('📊 Investment Approach page initialized');
@@ -232,10 +206,23 @@ export async function initInvestmentApproachPage() {
     const riveCleanup = initRive({ onInteraction: false });
     if (typeof riveCleanup === 'function') cleanupFns.push(riveCleanup);
 
-    setupFinsweetListClear();
     initDropdown();
     initModalBasic();
     initAccordionCSS();
+    (() => {
+      const sectorsDropdown = document.querySelector('#sectors-dropdown');
+      const filtersBtns = sectorsDropdown.querySelectorAll('.filter-btn');
+      const sectorsDropdownHead = sectorsDropdown.querySelector('[dropdown-head-text]');
+      filtersBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.textContent === 'All') {
+            sectorsDropdownHead.textContent = 'Sectors';
+          } else {
+            sectorsDropdownHead.textContent = btn.textContent;
+          }
+        });
+      });
+    })();
   } catch (error) {
     handleError(error, 'Investment Approach Page Initialization');
   }

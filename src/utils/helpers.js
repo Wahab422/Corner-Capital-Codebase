@@ -15,6 +15,7 @@ const smoothScrollHandlers = new WeakMap();
  * - rafThrottle(fn): throttle with requestAnimationFrame.
  * - isInViewport(el, offset): viewport check with offset.
  * - observeInView(elements, cb, options): IO observer + fallback.
+ * - handleStagger(): set transition delays on [data-anim] / .data-anim from [data-stagger] / [data-stagger-delay].
  * - animateNumber(el, end, duration, start): count up animation.
  * - smoothScrollTo(el, target, offset, options): bind smooth scroll.
  * - lenisSmoothScrollTo(target, offset, options): scroll w/ Lenis.
@@ -218,6 +219,37 @@ export function observeInView(elements, callback, options = {}) {
     window.removeEventListener('scroll', checkInView);
     window.removeEventListener('resize', checkInView);
   };
+}
+
+/**
+ * Set staggered transition delays on children with [data-anim] or .data-anim
+ * inside elements with [data-stagger]. Uses data-stagger as step (ms) and optional data-stagger-delay as initial delay.
+ */
+export function handleStagger() {
+  if (!document.querySelector('[data-stagger]')) return;
+
+  document.querySelectorAll('[data-stagger]').forEach((t) => {
+    const staggerValue = t.getAttribute('data-stagger');
+    const hasDelayAttribute = t.hasAttribute('data-stagger-delay');
+    const delayValue = t.getAttribute('data-stagger-delay');
+    const effectiveStagger =
+      staggerValue && Number(staggerValue) > 1 ? Number(staggerValue) : 100;
+    let currentDelay;
+
+    if (hasDelayAttribute) {
+      currentDelay =
+        delayValue && delayValue !== '' ? Number(delayValue) : effectiveStagger;
+    } else {
+      currentDelay = 0;
+    }
+
+    Array.from(t.querySelectorAll('[data-anim], .data-anim')).forEach((child) => {
+      if (currentDelay > 0) {
+        child.style.transitionDelay = currentDelay + 'ms';
+      }
+      currentDelay += effectiveStagger;
+    });
+  });
 }
 
 /**
@@ -705,9 +737,13 @@ export function withErrorHandler(fn, context = 'Function') {
  */
 export function loadScript(src, options = {}) {
   return new Promise((resolve, reject) => {
-    // Check if script already exists
-    const existingScript = document.querySelector(`script[src="${src}"]`);
-    if (existingScript) {
+    // Check if script already exists (by src or by id to avoid race duplicates)
+    const existingBySrc = document.querySelector(`script[src="${src}"]`);
+    if (existingBySrc) {
+      resolve();
+      return;
+    }
+    if (options.id && document.querySelector(`script#${CSS.escape(options.id)}`)) {
       resolve();
       return;
     }

@@ -525,6 +525,28 @@
       }
     };
   }
+  function handleStagger() {
+    if (!document.querySelector("[data-stagger]"))
+      return;
+    document.querySelectorAll("[data-stagger]").forEach((t2) => {
+      const staggerValue = t2.getAttribute("data-stagger");
+      const hasDelayAttribute = t2.hasAttribute("data-stagger-delay");
+      const delayValue = t2.getAttribute("data-stagger-delay");
+      const effectiveStagger = staggerValue && Number(staggerValue) > 1 ? Number(staggerValue) : 100;
+      let currentDelay;
+      if (hasDelayAttribute) {
+        currentDelay = delayValue && delayValue !== "" ? Number(delayValue) : effectiveStagger;
+      } else {
+        currentDelay = 0;
+      }
+      Array.from(t2.querySelectorAll("[data-anim], .data-anim")).forEach((child) => {
+        if (currentDelay > 0) {
+          child.style.transitionDelay = currentDelay + "ms";
+        }
+        currentDelay += effectiveStagger;
+      });
+    });
+  }
   function resolveElement(ref) {
     if (!ref || typeof document === "undefined")
       return null;
@@ -608,8 +630,12 @@
   }
   function loadScript(src, options = {}) {
     return new Promise((resolve, reject) => {
-      const existingScript = document.querySelector(`script[src="${src}"]`);
-      if (existingScript) {
+      const existingBySrc = document.querySelector(`script[src="${src}"]`);
+      if (existingBySrc) {
+        resolve();
+        return;
+      }
+      if (options.id && document.querySelector(`script#${CSS.escape(options.id)}`)) {
         resolve();
         return;
       }
@@ -632,58 +658,20 @@
     }
   });
 
-  // src/global/navbar.js
-  function initNavbar() {
-    logger.log("\u{1F4F1} Navbar initialized");
-    try {
-      const menuBtn = document.querySelector("[menu-btn]");
-      const nav = document.querySelector("[nav]");
-      if (menuBtn && nav) {
-        const handleMenuBtnClick = () => {
-          nav.classList.toggle("open");
-        };
-        menuBtn.addEventListener("click", handleMenuBtnClick);
-        cleanupFunctions.push(() => {
-          menuBtn.removeEventListener("click", handleMenuBtnClick);
-        });
-      }
-    } catch (error) {
-      handleError(error, "Navbar Initialization");
-    }
-  }
-  function cleanupNavbar() {
-    cleanupFunctions.forEach((cleanup) => {
-      try {
-        cleanup();
-      } catch (error) {
-        handleError(error, "Navbar Cleanup");
-      }
-    });
-    cleanupFunctions.length = 0;
-  }
-  var cleanupFunctions;
-  var init_navbar = __esm({
-    "src/global/navbar.js"() {
-      init_helpers();
-      init_logger();
-      cleanupFunctions = [];
-    }
-  });
-
   // src/global/footer.js
   function initFooter() {
     logger.log("\u{1F9B6} Footer initialized");
     handleLocationsection();
   }
   function cleanupFooter() {
-    cleanupFunctions2.forEach((cleanup) => {
+    cleanupFunctions.forEach((cleanup) => {
       try {
         cleanup();
       } catch (error) {
         handleError(error, "Footer Cleanup");
       }
     });
-    cleanupFunctions2.length = 0;
+    cleanupFunctions.length = 0;
   }
   function handleLocationsection() {
     const section = document.querySelector("#clip-slider-section");
@@ -783,12 +771,12 @@
     }, 5e3);
     updateStates();
   }
-  var cleanupFunctions2;
+  var cleanupFunctions;
   var init_footer = __esm({
     "src/global/footer.js"() {
       init_helpers();
       init_logger();
-      cleanupFunctions2 = [];
+      cleanupFunctions = [];
     }
   });
 
@@ -971,6 +959,9 @@
     }
   }
   async function loadSplitText() {
+    if (typeof document !== "undefined" && document.fonts && typeof document.fonts.ready === "object" && typeof document.fonts.ready.then === "function") {
+      await document.fonts.ready;
+    }
     if (splitTextLoaded || isLibraryLoaded("splitText")) {
       if (typeof window.SplitText === "undefined") {
         await waitForGlobal("SplitText");
@@ -1084,6 +1075,7 @@
       handleError(error, "GSAP Global Animation");
       return;
     }
+    handleStagger();
     const gsap2 = window.gsap;
     const ScrollTrigger = window.ScrollTrigger;
     const defaultEase = window.CustomEase && window.CustomEase.create ? window.CustomEase.create("tokenz-default", "M0,0 C0.22,0.6 0.36,1 1,1") : "cubic-bezier(.22,.6,.36,1)";
@@ -1433,12 +1425,8 @@
       window.addEventListener("resize", resizeHandler);
       splitTextCleanupRef = cleanup;
     }
-    applyScaleAnimation();
     applyStaggerAnimation();
     applyElementAnimation();
-    applyHeadingAnimation();
-    applyParallaxAnimation();
-    applyBackgroundLinesAnimation();
     await applySplitTextAnimation();
     animationsInitialized = true;
   }
@@ -1499,6 +1487,48 @@
   });
 
   // src/global/index.js
+  function initNavbar() {
+    logger.log("\u{1F4F1} Navbar initialized");
+    try {
+      (() => {
+        const menuBtn = document.querySelector("[menu-btn]");
+        const nav = document.querySelector("[nav]");
+        if (menuBtn && nav) {
+          const menuLinksList = document.querySelector(".menu-links-list");
+          const closeMenu = () => {
+            nav.classList.remove("open");
+          };
+          const handleMenuBtnClick = () => {
+            nav.classList.toggle("open");
+          };
+          menuBtn.addEventListener("click", handleMenuBtnClick);
+          navbarCleanupFunctions.push(() => {
+            menuBtn.removeEventListener("click", handleMenuBtnClick);
+          });
+          if (menuLinksList) {
+            const menuLinks = menuLinksList.querySelectorAll("a");
+            const handleMenuLinkClick = () => closeMenu();
+            menuLinks.forEach((link) => link.addEventListener("click", handleMenuLinkClick));
+            navbarCleanupFunctions.push(() => {
+              menuLinks.forEach((link) => link.removeEventListener("click", handleMenuLinkClick));
+            });
+          }
+        }
+      })();
+    } catch (error) {
+      handleError(error, "Navbar Initialization");
+    }
+  }
+  function cleanupNavbar() {
+    navbarCleanupFunctions.forEach((cleanup) => {
+      try {
+        cleanup();
+      } catch (error) {
+        handleError(error, "Navbar Cleanup");
+      }
+    });
+    navbarCleanupFunctions.length = 0;
+  }
   async function initGlobal() {
     logger.log("\u{1F310} Initializing global components...");
     cleanupNavbar();
@@ -1728,13 +1758,15 @@
     setActive(0);
     startAutoplay();
   }
+  var navbarCleanupFunctions;
   var init_global = __esm({
     "src/global/index.js"() {
       init_lenis2();
-      init_navbar();
       init_footer();
       init_gsap();
+      init_helpers();
       init_logger();
+      navbarCleanupFunctions = [];
     }
   });
 
@@ -5874,17 +5906,27 @@
     let scrollAnimDuration = 0;
     let intersectionObserver = null;
     const SCROLL_TRIGGER_THRESHOLD = 0.05;
+    const SCRUB_DRAW_INTERVAL_MS = 33;
+    const SCRUB_PROGRESS_EPSILON = 2e-3;
+    let lastScrubDrawTime = 0;
+    let lastScrubProgress = -1;
+    let lastHybridScrollProgress = -1;
     const onResize = () => {
       if (!canvas || !renderer)
         return;
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const w = Math.max(1, Math.round(rect.width * dpr) || DEFAULT_CANVAS_WIDTH);
-      const h = Math.max(1, Math.round(rect.height * dpr) || DEFAULT_CANVAS_HEIGHT);
+      const cappedDpr = typeof window.matchMedia !== "undefined" && window.matchMedia("(max-width: 1024px)").matches ? Math.min(dpr, 2) : dpr;
+      const w = Math.max(1, Math.round(rect.width * cappedDpr) || DEFAULT_CANVAS_WIDTH);
+      const h = Math.max(1, Math.round(rect.height * cappedDpr) || DEFAULT_CANVAS_HEIGHT);
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
       }
+    };
+    const ensureCanvasSize = () => {
+      if (canvas && (canvas.width < 1 || canvas.height < 1))
+        onResize();
     };
     let autoplayIndices = [];
     let scrollIndices = [];
@@ -5973,7 +6015,7 @@
         window.addEventListener("touchmove", scrollLockHandler, { passive: false });
         window.addEventListener("keydown", keyLockHandler);
         const tick = (time) => {
-          onResize();
+          ensureCanvasSize();
           if (canvas.width < 1 || canvas.height < 1) {
             rafId = rive.requestAnimationFrame(tick);
             return;
@@ -6035,53 +6077,66 @@
             } else {
               scrollProgress = 0;
             }
-            for (const i of autoplayIndices) {
-              const inst = animationInstances[i];
-              const override = getDurationForIndex(durationOverride, i);
-              setTimePercentage(inst, artboard, 1, override);
-            }
-            if (scrollIndices.length === 1) {
-              const i = scrollIndices[0];
-              setTimePercentage(
-                animationInstances[i],
-                artboard,
-                scrollProgress,
-                getDurationForIndex(durationOverride, i)
-              );
-            } else if (scrollIndices.length > 1) {
-              const scrollInstances = scrollIndices.map((i) => animationInstances[i]);
-              const scrollDurationOverride = scrollIndices.map(
-                (i) => getDurationForIndex(durationOverride, i)
-              );
-              setTimePercentageSequence(
-                scrollInstances,
-                artboard,
-                scrollProgress,
-                scrollDurationOverride.length ? scrollDurationOverride : null
-              );
-            }
-            if (scrubIndices.length === 1) {
-              const i = scrubIndices[0];
-              setTimePercentage(
-                animationInstances[i],
-                artboard,
-                scrubProgress,
-                getDurationForIndex(durationOverride, i)
-              );
-            } else if (scrubIndices.length > 1) {
-              const scrubInstances = scrubIndices.map((i) => animationInstances[i]);
-              const scrubDurationOverride = scrubIndices.map(
-                (i) => getDurationForIndex(durationOverride, i)
-              );
-              setTimePercentageSequence(
-                scrubInstances,
-                artboard,
-                scrubProgress,
-                scrubDurationOverride.length ? scrubDurationOverride : null
-              );
+            const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+            const scrubChanged = Math.abs(scrubProgress - lastScrubProgress) > SCRUB_PROGRESS_EPSILON;
+            const scrollChanged = scrollIndices.length > 0 && Math.abs(scrollProgress - lastHybridScrollProgress) > SCRUB_PROGRESS_EPSILON;
+            const throttleElapsed = now - lastScrubDrawTime >= SCRUB_DRAW_INTERVAL_MS;
+            const shouldDraw = throttleElapsed || scrubChanged || scrollChanged || lastScrubProgress < 0;
+            if (shouldDraw) {
+              lastScrubDrawTime = now;
+              lastScrubProgress = scrubProgress;
+              lastHybridScrollProgress = scrollProgress;
+              for (const i of autoplayIndices) {
+                const inst = animationInstances[i];
+                const override = getDurationForIndex(durationOverride, i);
+                setTimePercentage(inst, artboard, 1, override);
+              }
+              if (scrollIndices.length === 1) {
+                const i = scrollIndices[0];
+                setTimePercentage(
+                  animationInstances[i],
+                  artboard,
+                  scrollProgress,
+                  getDurationForIndex(durationOverride, i)
+                );
+              } else if (scrollIndices.length > 1) {
+                const scrollInstances = scrollIndices.map((i) => animationInstances[i]);
+                const scrollDurationOverride = scrollIndices.map(
+                  (i) => getDurationForIndex(durationOverride, i)
+                );
+                setTimePercentageSequence(
+                  scrollInstances,
+                  artboard,
+                  scrollProgress,
+                  scrollDurationOverride.length ? scrollDurationOverride : null
+                );
+              }
+              if (scrubIndices.length === 1) {
+                const i = scrubIndices[0];
+                setTimePercentage(
+                  animationInstances[i],
+                  artboard,
+                  scrubProgress,
+                  getDurationForIndex(durationOverride, i)
+                );
+              } else if (scrubIndices.length > 1) {
+                const scrubInstances = scrubIndices.map((i) => animationInstances[i]);
+                const scrubDurationOverride = scrubIndices.map(
+                  (i) => getDurationForIndex(durationOverride, i)
+                );
+                setTimePercentageSequence(
+                  scrubInstances,
+                  artboard,
+                  scrubProgress,
+                  scrubDurationOverride.length ? scrubDurationOverride : null
+                );
+              }
+              drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : void 0);
             }
           }
-          drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : void 0);
+          if (!autoplayDone) {
+            drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : void 0);
+          }
           rafId = rive.requestAnimationFrame(tick);
         };
         rafId = rive.requestAnimationFrame(tick);
@@ -6109,7 +6164,7 @@
         const vh = window.innerHeight;
         isInView = rect.top < vh && rect.bottom > 0;
         const tick = (time) => {
-          onResize();
+          ensureCanvasSize();
           if (canvas.width < 1 || canvas.height < 1) {
             rafId = rive.requestAnimationFrame(tick);
             return;
@@ -6148,18 +6203,30 @@
           }
         });
         const scrubTick = () => {
-          onResize();
+          ensureCanvasSize();
           if (canvas.width < 1 || canvas.height < 1) {
             rafId = rive.requestAnimationFrame(scrubTick);
             return;
           }
-          if (animationInstances.length === 1) {
-            const singleOverride = getDurationForIndex(durationOverride, 0);
-            setTimePercentage(animationInstances[0], artboard, scrollProgress, singleOverride);
-          } else {
-            setTimePercentageSequence(animationInstances, artboard, scrollProgress, durationOverride);
+          const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+          const progressChanged = Math.abs(scrollProgress - lastScrubProgress) > SCRUB_PROGRESS_EPSILON;
+          const throttleElapsed = now - lastScrubDrawTime >= SCRUB_DRAW_INTERVAL_MS;
+          if (progressChanged || throttleElapsed || lastScrubProgress < 0) {
+            lastScrubDrawTime = now;
+            lastScrubProgress = scrollProgress;
+            if (animationInstances.length === 1) {
+              const singleOverride = getDurationForIndex(durationOverride, 0);
+              setTimePercentage(animationInstances[0], artboard, scrollProgress, singleOverride);
+            } else {
+              setTimePercentageSequence(
+                animationInstances,
+                artboard,
+                scrollProgress,
+                durationOverride
+              );
+            }
+            drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : void 0);
           }
-          drawFrame(rive, renderer, canvas, artboard, useCoverFit ? rive.Fit.cover : void 0);
           rafId = rive.requestAnimationFrame(scrubTick);
         };
         rafId = rive.requestAnimationFrame(scrubTick);
@@ -6809,26 +6876,41 @@
     });
     logger.log("\u{1F3E0} Home page initialized");
     try {
+      await ensureGSAPLoaded();
+      const gsap2 = window.gsap;
+      if (gsap2) {
+        gsap2.to(".home-hero-body", {
+          opacity: 0,
+          duration: 1,
+          ease: "power2.inOut",
+          scrollTrigger: {
+            trigger: "#home-hero-section",
+            start: "70% 20%",
+            end: "bottom 20%",
+            scrub: true
+          }
+        });
+      }
       initHeroAnimation();
       initCarousel();
       await initGlobalChampionScrollLock();
       const riveCleanup = initRive({ onInteraction: false });
       if (typeof riveCleanup === "function")
-        cleanupFunctions3.push(riveCleanup);
+        cleanupFunctions2.push(riveCleanup);
       initTabs();
     } catch (error) {
       handleError(error, "Home Page Initialization");
     }
   }
   function cleanupHomePage() {
-    cleanupFunctions3.forEach((cleanup) => {
+    cleanupFunctions2.forEach((cleanup) => {
       try {
         cleanup();
       } catch (error) {
         handleError(error, "Home Page Cleanup");
       }
     });
-    cleanupFunctions3.length = 0;
+    cleanupFunctions2.length = 0;
   }
   async function initGlobalChampionScrollLock() {
     const section = document.querySelector(".section.is-global-champion");
@@ -6858,7 +6940,7 @@
     });
     const onResize = () => ScrollTrigger.refresh();
     window.addEventListener("resize", onResize);
-    cleanupFunctions3.push(() => {
+    cleanupFunctions2.push(() => {
       trigger.kill();
       window.removeEventListener("resize", onResize);
     });
@@ -6919,7 +7001,7 @@
       setCookie(HERO_SEEN_COOKIE, "1");
     }, 4200);
   }
-  var cleanupFunctions3, HERO_SEEN_COOKIE;
+  var cleanupFunctions2, HERO_SEEN_COOKIE;
   var init_home = __esm({
     "src/pages/home.js"() {
       init_helpers();
@@ -6928,7 +7010,7 @@
       init_gsap();
       init_rive();
       init_tabsComp1();
-      cleanupFunctions3 = [];
+      cleanupFunctions2 = [];
       HERO_SEEN_COOKIE = "corner_hero_seen";
     }
   });
@@ -6946,7 +7028,7 @@
       await initStickySliderScrollLock();
       const riveCleanup = initRive({ onInteraction: false });
       if (typeof riveCleanup === "function")
-        cleanupFunctions4.push(riveCleanup);
+        cleanupFunctions3.push(riveCleanup);
       (() => {
         const tooltip = document.createElement("div");
         tooltip.classList.add("location-tooltip-text");
@@ -6999,14 +7081,14 @@
     }
   }
   function cleanupAboutPage() {
-    cleanupFunctions4.forEach((cleanup) => {
+    cleanupFunctions3.forEach((cleanup) => {
       try {
         cleanup();
       } catch (error) {
         handleError(error, "About Page Cleanup");
       }
     });
-    cleanupFunctions4.length = 0;
+    cleanupFunctions3.length = 0;
   }
   async function initStickySliderScrollLock() {
     const track = document.querySelector("#stickySliderTrack");
@@ -7049,13 +7131,13 @@
     });
     const onResize = () => ScrollTrigger.refresh();
     window.addEventListener("resize", onResize);
-    cleanupFunctions4.push(() => {
+    cleanupFunctions3.push(() => {
       trigger.kill();
       window.removeEventListener("resize", onResize);
     });
     logger.log(`\u2705 Sticky slider scroll-lock: ${slideCount} slides`);
   }
-  var cleanupFunctions4;
+  var cleanupFunctions3;
   var init_about = __esm({
     "src/pages/about.js"() {
       init_helpers();
@@ -7063,7 +7145,7 @@
       init_carousel();
       init_gsap();
       init_rive();
-      cleanupFunctions4 = [];
+      cleanupFunctions3 = [];
     }
   });
 
@@ -7082,22 +7164,22 @@
     }
   }
   function cleanupContactPage() {
-    cleanupFunctions5.forEach((cleanup) => {
+    cleanupFunctions4.forEach((cleanup) => {
       try {
         cleanup();
       } catch (error) {
         handleError(error, "Contact Page Cleanup");
       }
     });
-    cleanupFunctions5.length = 0;
+    cleanupFunctions4.length = 0;
   }
-  var cleanupFunctions5;
+  var cleanupFunctions4;
   var init_contact = __esm({
     "src/pages/contact.js"() {
       init_helpers();
       init_logger();
       init_helpers();
-      cleanupFunctions5 = [];
+      cleanupFunctions4 = [];
     }
   });
 
@@ -7115,20 +7197,20 @@
       initTabs();
       const riveCleanup = initRive({ onInteraction: false });
       if (typeof riveCleanup === "function")
-        cleanupFunctions6.push(riveCleanup);
+        cleanupFunctions5.push(riveCleanup);
     } catch (error) {
       handleError(error, "Solutions Page Initialization");
     }
   }
   function cleanupSolutionsPage() {
-    cleanupFunctions6.forEach((cleanup) => {
+    cleanupFunctions5.forEach((cleanup) => {
       try {
         cleanup();
       } catch (error) {
         handleError(error, "Solutions Page Cleanup");
       }
     });
-    cleanupFunctions6.length = 0;
+    cleanupFunctions5.length = 0;
   }
   async function initStickySliderScrollLock2() {
     const track = document.querySelector("#stickySliderTrack");
@@ -7171,13 +7253,13 @@
     });
     const onResize = () => ScrollTrigger.refresh();
     window.addEventListener("resize", onResize);
-    cleanupFunctions6.push(() => {
+    cleanupFunctions5.push(() => {
       trigger.kill();
       window.removeEventListener("resize", onResize);
     });
     logger.log(`\u2705 Sticky slider scroll-lock: ${slideCount} slides`);
   }
-  var cleanupFunctions6;
+  var cleanupFunctions5;
   var init_solutions = __esm({
     "src/pages/solutions.js"() {
       init_helpers();
@@ -7186,7 +7268,7 @@
       init_carousel();
       init_tabsComp1();
       init_rive();
-      cleanupFunctions6 = [];
+      cleanupFunctions5 = [];
     }
   });
 
@@ -7966,7 +8048,7 @@
       setupTriggers();
       const riveCleanup = initRive({ onInteraction: false });
       if (typeof riveCleanup === "function")
-        cleanupFunctions7.push(riveCleanup);
+        cleanupFunctions6.push(riveCleanup);
       setupFinsweetListClear();
       initDropdown();
       initModalBasic();
@@ -7987,16 +8069,16 @@
       }
     });
     cleanupFns2.length = 0;
-    cleanupFunctions7.forEach((cleanup) => {
+    cleanupFunctions6.forEach((cleanup) => {
       try {
         cleanup();
       } catch (error) {
         handleError(error, "Incubation Page Cleanup");
       }
     });
-    cleanupFunctions7.length = 0;
+    cleanupFunctions6.length = 0;
   }
-  var INVESTMENT_MODAL_NAME, TRIGGER_SELECTOR, MODAL_SELECTOR, CONTENT_WRAP_SELECTORS, DETAIL_LINE_CLASS, EMPTY_CLASS, FIELD_MAPPING, cleanupFunctions7, cleanupFns2;
+  var INVESTMENT_MODAL_NAME, TRIGGER_SELECTOR, MODAL_SELECTOR, CONTENT_WRAP_SELECTORS, DETAIL_LINE_CLASS, EMPTY_CLASS, FIELD_MAPPING, cleanupFunctions6, cleanupFns2;
   var init_incubation = __esm({
     "src/pages/incubation.js"() {
       init_helpers();
@@ -8035,7 +8117,7 @@
         },
         { trigger: "data-website-link", modal: "[data-website-link]", setter: "href" }
       ];
-      cleanupFunctions7 = [];
+      cleanupFunctions6 = [];
       cleanupFns2 = [];
     }
   });
@@ -8156,31 +8238,6 @@
     document.addEventListener("keydown", onKeyDown);
     cleanupFns3.push(() => document.removeEventListener("keydown", onKeyDown));
   }
-  function setupFinsweetListClear2() {
-    if (typeof window === "undefined")
-      return;
-    const clearBtn = document.querySelector('[fs-list-element="clear"]');
-    const radio = document.querySelector("#exited-radio");
-    const updateClearState = () => {
-      const isChecked = radio.checked && radio.getAttribute("fs-list-field");
-      if (isChecked) {
-        clearBtn.classList.remove("is-list-active");
-      } else {
-        clearBtn.classList.add("is-list-active");
-      }
-    };
-    window.FinsweetAttributes = window.FinsweetAttributes || [];
-    window.FinsweetAttributes.push([
-      "list",
-      (listInstances) => {
-        if (!listInstances?.length)
-          return;
-        const [listInstance] = listInstances;
-        listInstance.addHook("filter", updateClearState);
-        updateClearState();
-      }
-    ]);
-  }
   async function initInvestmentApproachPage() {
     logger.log("\u{1F4CA} Investment Approach page initialized");
     try {
@@ -8191,10 +8248,23 @@
       const riveCleanup = initRive({ onInteraction: false });
       if (typeof riveCleanup === "function")
         cleanupFns3.push(riveCleanup);
-      setupFinsweetListClear2();
       initDropdown();
       initModalBasic();
       initAccordionCSS();
+      (() => {
+        const sectorsDropdown = document.querySelector("#sectors-dropdown");
+        const filtersBtns = sectorsDropdown.querySelectorAll(".filter-btn");
+        const sectorsDropdownHead = sectorsDropdown.querySelector("[dropdown-head-text]");
+        filtersBtns.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            if (btn.textContent === "All") {
+              sectorsDropdownHead.textContent = "Sectors";
+            } else {
+              sectorsDropdownHead.textContent = btn.textContent;
+            }
+          });
+        });
+      })();
     } catch (error) {
       handleError(error, "Investment Approach Page Initialization");
     }
@@ -9313,6 +9383,149 @@
     }
   });
 
+  // src/integrations/webflow-barba.js
+  function loadFinsweetSolutions(keys) {
+    if (typeof window === "undefined")
+      return;
+    const fa = window.FinsweetAttributes;
+    if (!fa || typeof fa.load !== "function")
+      return;
+    for (const key of keys) {
+      try {
+        fa.load(key);
+      } catch (e2) {
+        logger.warn(`[Webflow Barba] Finsweet load("${key}") skipped:`, e2?.message ?? e2);
+      }
+    }
+  }
+  function waitForFinsweetReady(timeoutMs = 5e3) {
+    return new Promise((resolve) => {
+      if (window.FinsweetAttributes?.load) {
+        resolve();
+        return;
+      }
+      const start = Date.now();
+      const check = () => {
+        if (Date.now() - start > timeoutMs) {
+          resolve();
+          return;
+        }
+        if (window.FinsweetAttributes?.load) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    });
+  }
+  function ensureFinsweetLoaded() {
+    if (typeof window === "undefined")
+      return Promise.resolve();
+    const existing = document.querySelector(
+      `script[src*="finsweet"][src*="attributes"], script[src*="@finsweet/attributes"]`
+    );
+    if (existing)
+      return Promise.resolve();
+    if (window.FinsweetAttributes?.load) {
+      loadFinsweetSolutions(FINSWEET_MODULE_KEYS);
+      return Promise.resolve();
+    }
+    if (finsweetLoadPromise)
+      return finsweetLoadPromise;
+    finsweetLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = FINSWEET_SCRIPT_URL;
+      script.async = true;
+      script.type = "module";
+      script.onload = () => {
+        waitForFinsweetReady().then(() => {
+          loadFinsweetSolutions(FINSWEET_MODULE_KEYS);
+          resolve();
+        }).catch(resolve);
+      };
+      script.onerror = () => {
+        finsweetLoadPromise = null;
+        reject(new Error("Finsweet Attributes script failed to load"));
+      };
+      document.head?.appendChild(script);
+    });
+    return finsweetLoadPromise;
+  }
+  function reinitWebflowInteractions() {
+    if (typeof window === "undefined")
+      return;
+    try {
+      const wf = window.Webflow;
+      if (!wf)
+        return;
+      if (typeof wf.destroy === "function") {
+        wf.destroy();
+      }
+      const runIx2 = () => {
+        const ix2 = wf.require?.("ix2");
+        if (ix2) {
+          if (typeof ix2.destroy === "function")
+            ix2.destroy();
+          if (typeof ix2.init === "function")
+            ix2.init();
+          logger.log("[Webflow Barba] Webflow + IX2 reinitialized (forms, animations)");
+        } else {
+          logger.log("[Webflow Barba] Webflow reinitialized (forms)");
+        }
+      };
+      if (typeof wf.ready === "function") {
+        wf.ready(runIx2);
+      } else {
+        runIx2();
+      }
+    } catch (e2) {
+      logger.warn("[Webflow Barba] Webflow/IX2 reinit skipped or failed:", e2?.message ?? e2);
+    }
+  }
+  function restartFinsweetModules(keys = FINSWEET_MODULE_KEYS) {
+    if (typeof window === "undefined")
+      return;
+    const modules = window.FinsweetAttributes?.modules;
+    if (!modules || typeof modules !== "object")
+      return;
+    const toRestart = Array.isArray(keys) ? keys : FINSWEET_MODULE_KEYS;
+    for (const key of toRestart) {
+      try {
+        const mod = modules[key];
+        if (mod && typeof mod.restart === "function") {
+          mod.restart();
+          logger.log(`[Webflow Barba] Finsweet module restarted: ${key}`);
+        }
+      } catch (e2) {
+        logger.warn(`[Webflow Barba] Finsweet restart failed for "${key}":`, e2?.message ?? e2);
+      }
+    }
+  }
+  function refreshGSAPScrollTrigger() {
+    try {
+      refreshScrollTrigger();
+    } catch (e2) {
+      logger.warn("[Webflow Barba] ScrollTrigger refresh skipped:", e2?.message ?? e2);
+    }
+  }
+  function runPostTransitionReinit(options = {}) {
+    const { finsweetKeys } = options ?? {};
+    reinitWebflowInteractions();
+    restartFinsweetModules(finsweetKeys);
+    refreshGSAPScrollTrigger();
+  }
+  var FINSWEET_MODULE_KEYS, FINSWEET_SCRIPT_URL, finsweetLoadPromise;
+  var init_webflow_barba = __esm({
+    "src/integrations/webflow-barba.js"() {
+      init_gsap();
+      init_logger();
+      FINSWEET_MODULE_KEYS = ["list"];
+      FINSWEET_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@finsweet/attributes@2/attributes.js";
+      finsweetLoadPromise = null;
+    }
+  });
+
   // src/barba.js
   var barba_exports = {};
   __export(barba_exports, {
@@ -9371,8 +9584,7 @@
     if (!gsap2 || !container)
       return Promise.resolve();
     return gsap2.from(container, {
-      rotationZ: "-90deg",
-      y: "10vh",
+      opacity: 1,
       duration: 1,
       ease: "power2.inOut",
       clearProps: "all",
@@ -9417,7 +9629,7 @@
         lenis2.scrollTo(0, { duration: 0 });
       }
       await initPage(pageName || void 0, { skipGlobal: true });
-      refreshScrollTrigger();
+      runPostTransitionReinit();
     } catch (err) {
       logger.error("[Barba] Error in runInitAfterTransition:", err);
     } finally {
@@ -9436,6 +9648,7 @@
     }
     import_core.default.init({
       preventRunning: true,
+      prevent: ({ el }) => Boolean(el?.closest?.(".w-pagination-wrapper")),
       transitions: [
         {
           name: "default-transition",
@@ -9494,6 +9707,8 @@
         startLenis();
       }
     });
+    ensureFinsweetLoaded().catch(() => {
+    });
     logger.log("[Barba] Page transitions enabled");
   }
   var import_core, WRAPPER_SELECTOR, html, NAV_LINK_SELECTOR, CURRENT_CLASS, cachedWrapper;
@@ -9504,6 +9719,7 @@
       init_global();
       init_lenis2();
       init_gsap();
+      init_webflow_barba();
       init_logger();
       WRAPPER_SELECTOR = '[data-barba="wrapper"]';
       html = document.documentElement;
@@ -9590,8 +9806,10 @@
       const wrapper = document.querySelector('[data-barba="wrapper"]');
       const container = document.querySelector('[data-barba="container"]');
       if (wrapper && container) {
+        document.body.style.opacity = "0";
         Promise.resolve().then(() => (init_barba(), barba_exports)).then((m) => m.initBarba()).catch((err) => {
           logger.error("[Webflow Router] Failed to load Barba:", err);
+          document.body.style.opacity = "";
           document.documentElement.classList.remove("is-transitioning");
           document.documentElement.classList.add("ready");
           initPage();

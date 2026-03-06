@@ -15,6 +15,7 @@
  *    - .content-divider -> content divider animation on scroll
  *    - [data-split-text="char|word|line"] -> SplitText helper (set window.GSAP_SPLIT_TEXT_URL to override CDN path)
  *    - [data-anim-scramble-text] -> scramble text (chars cycle then reveal); optional value = stagger amount (e.g. "0.02")
+ *    - [data-stagger] / [data-stagger-delay] + [data-anim] / .data-anim -> handleStagger() sets CSS transition delays (runs in handleGlobalAnimation).
  *
  * SplitText eager (per page): Add data-split-text-script="eager" on <html> or <body> to load
  * SplitText as part of ensureGSAPLoaded (before GSAP when eager) so it is ready before any animations run.
@@ -25,7 +26,7 @@
  * - Safe to call initGSAP() multiple times; the loader guards against double-loading.
  */
 
-import { handleError, loadScript, rafThrottle } from '../utils/helpers';
+import { handleError, loadScript, rafThrottle, handleStagger } from '../utils/helpers';
 import { logger } from '../utils/logger';
 import { loadLibrary, isLibraryLoaded } from '../utils/jsdelivr';
 
@@ -132,8 +133,18 @@ async function loadScrollTrigger() {
 /**
  * Load SplitText plugin
  * Uses a shared in-flight promise so concurrent callers (e.g. ensureGSAPLoaded + applySplitTextAnimation) only load once.
+ * Waits for document.fonts.ready so SplitText measures text after fonts are loaded and layout is stable.
  */
 async function loadSplitText() {
+  if (
+    typeof document !== 'undefined' &&
+    document.fonts &&
+    typeof document.fonts.ready === 'object' &&
+    typeof document.fonts.ready.then === 'function'
+  ) {
+    await document.fonts.ready;
+  }
+
   if (splitTextLoaded || isLibraryLoaded('splitText')) {
     if (typeof window.SplitText === 'undefined') {
       await waitForGlobal('SplitText');
@@ -307,6 +318,8 @@ export async function handleGlobalAnimation() {
     handleError(error, 'GSAP Global Animation');
     return;
   }
+
+  handleStagger();
 
   const gsap = window.gsap;
   const ScrollTrigger = window.ScrollTrigger;
@@ -733,12 +746,12 @@ export async function handleGlobalAnimation() {
   }
 
   // Apply all animations
-  applyScaleAnimation();
+  // applyScaleAnimation();
   applyStaggerAnimation();
   applyElementAnimation();
-  applyHeadingAnimation();
-  applyParallaxAnimation();
-  applyBackgroundLinesAnimation();
+  // applyHeadingAnimation();
+  // applyParallaxAnimation();
+  // applyBackgroundLinesAnimation();
   await applySplitTextAnimation();
   // Mark as initialized to prevent duplicates
   animationsInitialized = true;
