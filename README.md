@@ -68,10 +68,10 @@ The output will be in the `dist/` folder.
 
 ### 1. During Development
 
-Add this script tag to your Webflow project settings (before `</body>` tag):
+Add this script tag to your Webflow project settings (before `</body>` tag). Use **`defer`** so the script does not block rendering (improves LCP and Lighthouse performance):
 
 ```html
-<script src="http://localhost:3000/index.js"></script>
+<script src="http://localhost:3000/index.js" defer></script>
 ```
 
 ### 2. In Production
@@ -96,9 +96,9 @@ Add this script tag to your Webflow project settings (before `</body>` tag):
    npm run vercel:url -- --project your-project-name
    ```
 
-3. **Add to Webflow**:
+3. **Add to Webflow** (use `defer` to avoid render-blocking and improve page speed):
    ```html
-   <script src="https://your-project-name.vercel.app/index.js"></script>
+   <script src="https://your-project-name.vercel.app/index.js" defer></script>
    ```
 
 📖 **See VERCEL_DEPLOYMENT.md for complete Vercel deployment guide!**
@@ -107,10 +107,10 @@ Add this script tag to your Webflow project settings (before `</body>` tag):
 
 1. Run `npm run build` to create the production build
 2. Upload `dist/index.js` to your hosting (GitHub Pages, Netlify, etc.)
-3. Add the script tag to your Webflow project settings:
+3. Add the script tag to your Webflow project settings (use **`defer`** to avoid blocking page render):
 
 ```html
-<script src="https://your-domain.com/index.js"></script>
+<script src="https://your-domain.com/index.js" defer></script>
 ```
 
 ### 3. Set Page Attributes

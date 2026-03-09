@@ -67,6 +67,16 @@ function updateNavCurrentState(pageName) {
     const parent = currentLink.closest('li') || currentLink.parentElement;
     if (parent) setCurrent(parent);
   }
+
+  // On contact page, hide the nav contact button; on other pages ensure it's visible
+  const navContactBtn = document.getElementById('nav-contact-btn');
+  if (navContactBtn) {
+    if (pageName === 'contact') {
+      navContactBtn.style.display = 'none';
+    } else {
+      navContactBtn.style.removeProperty('display');
+    }
+  }
 }
 
 function getWrapper() {
@@ -100,7 +110,7 @@ function animationLeave(container) {
   if (!gsap || !container) return Promise.resolve();
   return gsap.to(container, {
     opacity: 0,
-    duration: 0.2,
+    duration: 0.1,
     ease: 'none',
     clearProps: 'all',
   });

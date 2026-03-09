@@ -40,6 +40,16 @@ function initNavbar() {
             menuLinks.forEach((link) => link.removeEventListener('click', handleMenuLinkClick));
           });
         }
+
+        const handleScroll = () => {
+          if (nav.classList.contains('open')) {
+            closeMenu();
+          }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        navbarCleanupFunctions.push(() => {
+          window.removeEventListener('scroll', handleScroll);
+        });
       }
     })();
 

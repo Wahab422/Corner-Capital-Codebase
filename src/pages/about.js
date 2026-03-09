@@ -102,7 +102,6 @@ async function initStickySliderScrollLock() {
   const slideCount = slides.length;
   if (slideCount === 0) return;
 
-
   const dataSlideUpdate = document.querySelector('[data-slide-update]');
   await ensureGSAPLoaded();
   const ScrollTrigger = window.ScrollTrigger;

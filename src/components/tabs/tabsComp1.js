@@ -193,16 +193,17 @@ function createTabsInstance(root) {
     if (!progress) return;
     progress.style.transition = 'none';
     progress.style.width = `${Math.max(0, Math.min(100, percent))}%`;
-    void progress.offsetWidth;
   };
 
   const animateProgressToEnd = (idx, ms) => {
     const progress = getProgressEl(idx);
     if (!progress) return;
     progress.style.transition = 'none';
-    void progress.offsetWidth;
-    progress.style.transition = `width ${ms}ms linear`;
-    progress.style.width = '100%';
+    progress.style.width = progress.style.width || '0%';
+    requestAnimationFrame(() => {
+      progress.style.transition = `width ${ms}ms linear`;
+      progress.style.width = '100%';
+    });
   };
 
   const getTabsScroller = () => {
@@ -381,11 +382,10 @@ function createTabsInstance(root) {
       if (progress) {
         progress.style.transition = 'none';
         progress.style.width = '0%';
-        void progress.offsetWidth;
       }
     });
 
-    scrollActiveTabIntoView(index);
+    requestAnimationFrame(() => scrollActiveTabIntoView(index));
 
     // Hide prev panel immediately to prevent wrapper flash and height jump
     if (prevPanel && prevPanel !== nextPanel) {

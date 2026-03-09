@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": ["../src/index.css"],
-  "sourcesContent": ["\n\n.nav:not(.open) .menu-bg-shape-wrap{transform: translate(0%, -50%) rotate(-40deg);}\n.menu-bg-shape-wrap{transition: transform 0.8s cubic-bezier(0, 0, 0.58, 1);}\n.nav:not(.open) .menu{transform: translateX(-101%);}\n.menu{transition: transform 1s cubic-bezier(0, 0, 0.58, 1);}\n.nav:not(.open) .menu-link-item{opacity: 0; transform: translateX(-10px); transition-delay: 0.6s !important; }\n.nav.open .menu-link-item{transition: all 1s var(--ease);}\n\n\n\n"],
+  "sourcesContent": ["\n\n.nav:not(.open) .menu-bg-shape-wrap{transform: translate(0%, -50%) rotate(-40deg);}\n.menu-bg-shape-wrap{transition: transform 0.8s cubic-bezier(0, 0, 0.58, 1);}\n.nav:not(.open) .menu{transform: translateX(-101%);}\n.menu{transition: transform 1s cubic-bezier(0, 0, 0.58, 1);}\n.nav:not(.open) .menu-link-item{opacity: 0; transform: translateX(-10px); transition-delay: 0.6s !important; }\n.nav.open .menu-link-item{transition: all 1s var(--ease);}\n\n\n"],
   "mappings": ";AAEA,CAAC,GAAG,KAAK,CAAC,MAAM,CAAC;AAAmB,aAAW,UAAU,EAAE,EAAE,MAAM,OAAO;AAAQ;AAClF,CADiB;AACG,cAAY,UAAU,KAAK,aAAa,CAAC,EAAE,CAAC,EAAE,IAAI,EAAE;AAAG;AAC3E,CAFC,GAEG,KAAK,CAFC,MAEM,CAAC;AAAK,aAAW,WAAW;AAAO;AACnD,CADiB;AACX,cAAY,UAAU,GAAG,aAAa,CAAC,EAAE,CAAC,EAAE,IAAI,EAAE;AAAG;AAC3D,CAJC,GAIG,KAAK,CAJC,MAIM,CAAC;AAAe,WAAS;AAAG,aAAW,WAAW;AAAQ,oBAAkB;AAAiB;AAC7G,CALC,GAKG,CALM,KAKA,CADO;AACS,cAAY,IAAI,GAAG,IAAI;AAAQ;",
   "names": []
 }
