@@ -508,6 +508,10 @@
   });
 
   // src/utils/helpers.js
+  function safeParseInt(value, defaultValue = 0) {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : defaultValue;
+  }
   function rafThrottle(func) {
     let ticking = false;
     return function executedFunction(...args) {
@@ -7946,6 +7950,322 @@
     }
   });
 
+  // src/components/swiper.js
+  async function loadSwiperLibrary() {
+    if (swiperLibraryLoaded || isLibraryLoaded("swiper")) {
+      return Promise.resolve();
+    }
+    if (loadPromise2) {
+      return loadPromise2;
+    }
+    loadPromise2 = (async () => {
+      try {
+        await loadLibrary("swiper");
+        if (typeof Swiper === "undefined") {
+          throw new Error("Swiper library failed to load");
+        }
+        swiperLibraryLoaded = true;
+        if (pendingSliders2.length > 0) {
+          logger.log(`Initializing ${pendingSliders2.length} pending slider(s)...`);
+          initializeSwipers(pendingSliders2);
+          pendingSliders2 = [];
+        }
+        return true;
+      } catch (error) {
+        handleError(error, "Swiper Library Loader");
+        loadPromise2 = null;
+        throw error;
+      }
+    })();
+    return loadPromise2;
+  }
+  async function loadAndInitSlider2(slider) {
+    if (!swiperLibraryLoaded && !pendingSliders2.includes(slider)) {
+      pendingSliders2.push(slider);
+    }
+    if (!swiperLibraryLoaded) {
+      await loadSwiperLibrary();
+    }
+    if (swiperLibraryLoaded && !slider._swiperInitialized) {
+      initializeSwipers([slider]);
+    }
+  }
+  function initSwiper() {
+    const sliders = document.querySelectorAll("[swiper-slider]");
+    if (!sliders.length)
+      return;
+    logger.log(`\u23F3 Found ${sliders.length} slider(s) - will load when visible...`);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const slider = entry.target;
+            observer.unobserve(slider);
+            slider.setAttribute("data-swiper-observed", "true");
+            if (slider.hasAttribute("data-mq")) {
+              handleSliderMq(slider);
+            } else {
+              loadAndInitSlider2(slider);
+            }
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        // Start loading 200px before slider enters viewport
+        threshold: 0
+      }
+    );
+    sliders.forEach((slider) => {
+      observer.observe(slider);
+    });
+  }
+  function initializeSwipers(sliderList) {
+    if (!sliderList || !sliderList.length)
+      return;
+    sliderList.forEach((slider) => {
+      if (slider._swiperInitialized)
+        return;
+      slider._swiperInitialized = true;
+      const swiperContainer = slider.querySelector(".swiper");
+      if (!swiperContainer) {
+        logger.warn("Swiper container not found in slider:", slider);
+        return;
+      }
+      const nextBtn = slider.querySelector("[swiper-next-btn]");
+      const prevBtn = slider.querySelector("[swiper-prev-btn]");
+      const paginationEl = swiperContainer.querySelector(".swiper-pagination");
+      const customProgressBar = slider.querySelector(".swiper-progress-bar");
+      const syncId = slider.getAttribute("data-sync");
+      const spaceDesktop = safeParseInt(slider.getAttribute("data-space"), 24);
+      const spaceMobile = safeParseInt(slider.getAttribute("data-space-mobile"), 10);
+      const centerMode = slider.hasAttribute("data-center");
+      const centerBounds = slider.hasAttribute("data-center-bounds");
+      const clickToCenter = slider.hasAttribute("data-click-center");
+      const loopMode = slider.hasAttribute("data-loop");
+      const disableDrag = slider.hasAttribute("data-no-drag");
+      function updateButtonStates(swiper) {
+        const bothDisabled = swiper.isBeginning && swiper.isEnd;
+        if (prevBtn) {
+          prevBtn.style.pointerEvents = swiper.isBeginning ? "none" : "auto";
+          prevBtn.style.opacity = swiper.isBeginning ? "0.5" : "1";
+          prevBtn.style.display = bothDisabled ? "none" : "";
+          prevBtn.setAttribute("aria-disabled", String(swiper.isBeginning));
+        }
+        if (nextBtn) {
+          nextBtn.style.pointerEvents = swiper.isEnd ? "none" : "auto";
+          nextBtn.style.opacity = swiper.isEnd ? "0.5" : "1";
+          nextBtn.style.display = bothDisabled ? "none" : "";
+          nextBtn.setAttribute("aria-disabled", String(swiper.isEnd));
+        }
+      }
+      function updateCustomProgressBar(swiper) {
+        if (!customProgressBar)
+          return;
+        const slides = swiper.slides;
+        let totalSlides = slides.length;
+        let currentIndex = swiper.activeIndex;
+        if (swiper.params.loop) {
+          const realSlides = swiper.slides.filter(
+            (slide) => !slide.classList.contains("swiper-slide-duplicate")
+          );
+          totalSlides = realSlides.length;
+          currentIndex = swiper.realIndex;
+        }
+        let progress = 0;
+        if (swiper.params.slidesPerView === "auto") {
+          const maxTranslate = swiper.maxTranslate();
+          const currentTranslate = swiper.translate;
+          progress = totalSlides > 1 ? Math.abs(currentTranslate / maxTranslate) * 100 : 0;
+        } else {
+          progress = totalSlides > 1 ? currentIndex / (totalSlides - 1) * 100 : 0;
+        }
+        updateProgressBarUI(progress, currentIndex, totalSlides);
+        function updateProgressBarUI(prog, currentIdx, totalCount) {
+          const progressFill = customProgressBar.querySelector(".swiper-progress-fill");
+          if (progressFill) {
+            progressFill.style.width = `${Math.max(0, Math.min(100, prog))}%`;
+            customProgressBar.setAttribute("data-progress", prog.toFixed(1));
+            customProgressBar.setAttribute("data-current-slide", currentIdx + 1);
+            customProgressBar.setAttribute("data-total-slides", totalCount);
+          }
+        }
+      }
+      const swiperConfig = {
+        slidesPerView: "auto",
+        spaceBetween: spaceDesktop,
+        grabCursor: true,
+        speed: 700,
+        watchOverflow: true,
+        // Center mode (opt-in)
+        centeredSlides: centerMode,
+        centeredSlidesBounds: centerBounds,
+        slideToClickedSlide: centerMode || clickToCenter,
+        // Looping
+        loop: loopMode,
+        // Interaction
+        allowTouchMove: !disableDrag,
+        // Navigation
+        navigation: nextBtn || prevBtn ? {
+          nextEl: nextBtn,
+          prevEl: prevBtn
+        } : false,
+        // Pagination (only if element exists)
+        pagination: paginationEl ? {
+          el: paginationEl,
+          type: "progressbar",
+          progressbarFillClass: "swiper-pagination-progressbar-fill"
+        } : false,
+        // Responsive breakpoints
+        breakpoints: {
+          0: { spaceBetween: spaceMobile },
+          768: { spaceBetween: spaceDesktop }
+        },
+        // Event callbacks
+        on: {
+          init() {
+            updateButtonStates(this);
+            updateCustomProgressBar(this);
+            if (paginationEl) {
+              paginationEl.style.display = "block";
+            }
+          },
+          slideChange() {
+            updateButtonStates(this);
+            updateCustomProgressBar(this);
+          },
+          slideChangeTransitionEnd() {
+            updateButtonStates(this);
+            updateCustomProgressBar(this);
+          },
+          reachBeginning() {
+            updateButtonStates(this);
+          },
+          reachEnd() {
+            updateButtonStates(this);
+          },
+          resize() {
+            updateButtonStates(this);
+            updateCustomProgressBar(this);
+          },
+          update() {
+            updateButtonStates(this);
+            updateCustomProgressBar(this);
+          },
+          progress(swiper, progress) {
+            if (customProgressBar) {
+              const progressPercentage = progress * 100;
+              const progressFill = customProgressBar.querySelector(".swiper-progress-fill");
+              if (progressFill) {
+                progressFill.style.width = `${progressPercentage}%`;
+                customProgressBar.setAttribute("data-progress", progressPercentage.toFixed(1));
+              }
+            }
+          }
+        }
+      };
+      try {
+        const swiperInstance = new Swiper(swiperContainer, swiperConfig);
+        swiperContainer._swiper = swiperInstance;
+        registerSyncedSlider2(syncId, swiperInstance);
+        if (nextBtn) {
+          nextBtn.setAttribute("aria-label", "Next slide");
+          nextBtn.setAttribute("role", "button");
+        }
+        if (prevBtn) {
+          prevBtn.setAttribute("aria-label", "Previous slide");
+          prevBtn.setAttribute("role", "button");
+        }
+        swiperContainer.setAttribute("aria-live", "polite");
+        swiperContainer.setAttribute("aria-atomic", "false");
+        if (!slider._keyboardSetup) {
+          const keyboardHandler = (e2) => {
+            if (e2.key === "ArrowRight") {
+              e2.preventDefault();
+              swiperInstance.slideNext();
+            } else if (e2.key === "ArrowLeft") {
+              e2.preventDefault();
+              swiperInstance.slidePrev();
+            }
+          };
+          slider.addEventListener("keydown", keyboardHandler);
+          slider.tabIndex = 0;
+          slider.setAttribute("role", "region");
+          slider.setAttribute("aria-label", "Carousel");
+          slider._keyboardSetup = true;
+          swiperContainer._keyboardCleanup = () => {
+            slider.removeEventListener("keydown", keyboardHandler);
+            slider._keyboardSetup = false;
+            delete swiperContainer._keyboardCleanup;
+          };
+        }
+      } catch (error) {
+        handleError(error, "Swiper Initialization");
+      }
+    });
+    logger.log(`\u2705 ${sliderList.length} Swiper carousel(s) initialized`);
+  }
+  function registerSyncedSlider2(syncId, swiperInstance) {
+    if (!syncId || !swiperInstance)
+      return;
+    if (!syncedSliderGroups2.has(syncId)) {
+      syncedSliderGroups2.set(syncId, /* @__PURE__ */ new Set());
+    }
+    const group = syncedSliderGroups2.get(syncId);
+    group.add(swiperInstance);
+    const syncHandler = function() {
+      const targetIndex = this.params.loop ? this.realIndex : this.activeIndex;
+      group.forEach((otherSwiper) => {
+        if (otherSwiper === this || otherSwiper.destroyed)
+          return;
+        const goTo = otherSwiper.params.loop && typeof otherSwiper.slideToLoop === "function" ? otherSwiper.slideToLoop : otherSwiper.slideTo;
+        goTo.call(otherSwiper, targetIndex);
+      });
+    };
+    swiperInstance.on("slideChange", syncHandler);
+    swiperInstance.on("destroy", () => {
+      swiperInstance.off("slideChange", syncHandler);
+      group.delete(swiperInstance);
+      if (group.size === 0) {
+        syncedSliderGroups2.delete(syncId);
+      }
+    });
+  }
+  function handleSliderMq(slider) {
+    const mqAttr = slider.getAttribute("data-mq");
+    if (!mqAttr)
+      return;
+    console.log(`Setting up MQ listener for slider with MQ: ${mqAttr}`);
+    const mq = window.matchMedia(mqAttr);
+    if (mq.matches) {
+      loadAndInitSlider2(slider);
+    }
+    mq.addEventListener("change", (e2) => {
+      if (e2.matches) {
+        loadAndInitSlider2(slider);
+      } else {
+        const swiperInstance = slider.querySelector(".swiper")?._swiper;
+        if (swiperInstance) {
+          swiperInstance.destroy(true, true);
+          slider._swiperInitialized = false;
+        }
+      }
+    });
+  }
+  var swiperLibraryLoaded, loadPromise2, pendingSliders2, syncedSliderGroups2;
+  var init_swiper = __esm({
+    "src/components/swiper.js"() {
+      init_helpers();
+      init_jsdelivr();
+      init_logger();
+      swiperLibraryLoaded = false;
+      loadPromise2 = null;
+      pendingSliders2 = [];
+      syncedSliderGroups2 = /* @__PURE__ */ new Map();
+    }
+  });
+
   // src/pages/incubation.js
   var incubation_exports = {};
   __export(incubation_exports, {
@@ -8103,6 +8423,7 @@
       initModalBasic();
       initAccordionCSS();
       initTabs();
+      initSwiper();
     } catch (error) {
       handleError(error, "Incubation Page Initialization");
     }
@@ -8137,6 +8458,7 @@
       init_dropdown();
       init_accordion();
       init_rive();
+      init_swiper();
       INVESTMENT_MODAL_NAME = "investment-modal";
       TRIGGER_SELECTOR = "[data-investment-item]";
       MODAL_SELECTOR = `#${INVESTMENT_MODAL_NAME}, [data-modal-name="${INVESTMENT_MODAL_NAME}"]`;
