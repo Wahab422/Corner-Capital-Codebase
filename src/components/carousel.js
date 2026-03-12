@@ -129,15 +129,32 @@ export function initCarousel() {
 
   logger.log(`⏳ Found ${sliders.length} carousel(s) - will load when visible...`);
 
+  function isAllowedForCurrentViewport(slider) {
+    const mode = slider.getAttribute('data-carousel');
+    if (mode === 'tablet') {
+      return window.innerWidth <= 991;
+    }
+    if (mode === 'mobile') {
+      return window.innerWidth <= 768;
+    }
+    return true;
+  }
+
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const slider = entry.target;
-          observer.unobserve(slider);
-          slider.setAttribute('data-carousel-observed', 'true');
-          loadAndInitSlider(slider);
+        if (!entry.isIntersecting) return;
+
+        const slider = entry.target;
+
+        // Respect breakpoint-specific sliders
+        if (!isAllowedForCurrentViewport(slider)) {
+          return;
         }
+
+        observer.unobserve(slider);
+        slider.setAttribute('data-carousel-observed', 'true');
+        loadAndInitSlider(slider);
       });
     },
     {

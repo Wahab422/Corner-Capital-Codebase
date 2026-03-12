@@ -1864,15 +1864,28 @@
     if (!sliders.length)
       return;
     logger.log(`\u23F3 Found ${sliders.length} carousel(s) - will load when visible...`);
+    function isAllowedForCurrentViewport(slider) {
+      const mode = slider.getAttribute("data-carousel");
+      if (mode === "tablet") {
+        return window.innerWidth <= 991;
+      }
+      if (mode === "mobile") {
+        return window.innerWidth <= 768;
+      }
+      return true;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const slider = entry.target;
-            observer.unobserve(slider);
-            slider.setAttribute("data-carousel-observed", "true");
-            loadAndInitSlider(slider);
+          if (!entry.isIntersecting)
+            return;
+          const slider = entry.target;
+          if (!isAllowedForCurrentViewport(slider)) {
+            return;
           }
+          observer.unobserve(slider);
+          slider.setAttribute("data-carousel-observed", "true");
+          loadAndInitSlider(slider);
         });
       },
       {
@@ -8103,6 +8116,7 @@
       initModalBasic();
       initAccordionCSS();
       initTabs();
+      initCarousel();
     } catch (error) {
       handleError(error, "Incubation Page Initialization");
     }
@@ -8137,6 +8151,7 @@
       init_dropdown();
       init_accordion();
       init_rive();
+      init_carousel();
       INVESTMENT_MODAL_NAME = "investment-modal";
       TRIGGER_SELECTOR = "[data-investment-item]";
       MODAL_SELECTOR = `#${INVESTMENT_MODAL_NAME}, [data-modal-name="${INVESTMENT_MODAL_NAME}"]`;
