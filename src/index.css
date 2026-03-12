@@ -7,4 +7,3 @@
 .nav:not(.open) .menu-link-item{opacity: 0; transform: translateX(-10px); transition-delay: 0.6s !important; }
 .nav.open .menu-link-item{transition: all 1s var(--ease);}
 
-

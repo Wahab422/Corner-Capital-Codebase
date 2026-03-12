@@ -8142,7 +8142,7 @@
       MODAL_SELECTOR = `#${INVESTMENT_MODAL_NAME}, [data-modal-name="${INVESTMENT_MODAL_NAME}"]`;
       CONTENT_WRAP_SELECTORS = ".content.for-porf-modal, [data-modal-content]";
       DETAIL_LINE_CLASS = "porf-detail-line";
-      EMPTY_CLASS = "is-empty";
+      EMPTY_CLASS = "hide";
       FIELD_MAPPING = [
         { trigger: "data-item-name", modal: "[data-item-name]", setter: "text" },
         { trigger: "data-item-description", modal: "[data-item-description]", setter: "text" },
@@ -8164,7 +8164,18 @@
           setter: "text",
           hideLineWhenEmpty: true
         },
-        { trigger: "data-website-link", modal: "[data-website-link]", setter: "href" }
+        {
+          trigger: "data-item-founder",
+          modal: "[data-item-founder]",
+          setter: "text",
+          hideLineWhenEmpty: true
+        },
+        {
+          trigger: "data-website-link",
+          modal: "[data-website-link]",
+          setter: "href",
+          hideLineWhenEmpty: true
+        }
       ];
       cleanupFunctions6 = [];
       cleanupFns2 = [];
@@ -8344,7 +8355,7 @@
       MODAL_SELECTOR2 = `#${INVESTMENT_MODAL_NAME2}, [data-modal-name="${INVESTMENT_MODAL_NAME2}"]`;
       CONTENT_WRAP_SELECTORS2 = ".content.for-porf-modal, [data-modal-content]";
       DETAIL_LINE_CLASS2 = "porf-detail-line";
-      EMPTY_CLASS2 = "is-empty";
+      EMPTY_CLASS2 = "hide";
       FIELD_MAPPING2 = [
         { trigger: "data-item-name", modal: "[data-item-name]", setter: "text" },
         { trigger: "data-item-description", modal: "[data-item-description]", setter: "text" },

@@ -12,7 +12,7 @@ const MODAL_SELECTOR = `#${INVESTMENT_MODAL_NAME}, [data-modal-name="${INVESTMEN
 
 const CONTENT_WRAP_SELECTORS = '.content.for-porf-modal, [data-modal-content]';
 const DETAIL_LINE_CLASS = 'porf-detail-line';
-const EMPTY_CLASS = 'is-empty';
+const EMPTY_CLASS = 'hide';
 
 const FIELD_MAPPING = [
   { trigger: 'data-item-name', modal: '[data-item-name]', setter: 'text' },
@@ -35,7 +35,18 @@ const FIELD_MAPPING = [
     setter: 'text',
     hideLineWhenEmpty: true,
   },
-  { trigger: 'data-website-link', modal: '[data-website-link]', setter: 'href' },
+  {
+    trigger: 'data-item-founder',
+    modal: '[data-item-founder]',
+    setter: 'text',
+    hideLineWhenEmpty: true,
+  },
+  {
+    trigger: 'data-website-link',
+    modal: '[data-website-link]',
+    setter: 'href',
+    hideLineWhenEmpty: true,
+  },
 ];
 
 const cleanupFunctions = [];
