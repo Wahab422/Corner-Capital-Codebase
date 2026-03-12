@@ -5,6 +5,7 @@ import { initModalBasic, cleanupModalBasic } from '../components/modal-basic';
 import { initDropdown, cleanupDropdown } from '../components/dropdown';
 import { initAccordionCSS } from '../components/accordion';
 import { initRive } from '../components/rive';
+import { initSwiper } from 'src/components/swiper';
 
 const INVESTMENT_MODAL_NAME = 'investment-modal';
 const TRIGGER_SELECTOR = '[data-investment-item]';
@@ -222,6 +223,7 @@ export async function initIncubationPage() {
     initModalBasic();
     initAccordionCSS();
     initTabs();
+    initSwiper();
   } catch (error) {
     handleError(error, 'Incubation Page Initialization');
   }

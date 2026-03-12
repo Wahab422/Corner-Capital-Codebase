@@ -127,8 +127,13 @@ export function initSwiper() {
           // Mark as observed
           slider.setAttribute('data-swiper-observed', 'true');
 
-          // Load and initialize
-          loadAndInitSlider(slider);
+          // handle mq cases
+          if (slider.hasAttribute('data-mq')) {
+            handleSliderMq(slider);
+          } else {
+            // Load and initialize
+            loadAndInitSlider(slider);
+          }
         }
       });
     },
@@ -443,6 +448,29 @@ function registerSyncedSlider(syncId, swiperInstance) {
     group.delete(swiperInstance);
     if (group.size === 0) {
       syncedSliderGroups.delete(syncId);
+    }
+  });
+}
+
+function handleSliderMq(slider) {
+  const mqAttr = slider.getAttribute('data-mq');
+  if (!mqAttr) return;
+  console.log(`Setting up MQ listener for slider with MQ: ${mqAttr}`);
+
+  const mq = window.matchMedia(mqAttr);
+  if (mq.matches) {
+    loadAndInitSlider(slider);
+  }
+
+  mq.addEventListener('change', (e) => {
+    if (e.matches) {
+      loadAndInitSlider(slider);
+    } else {
+      const swiperInstance = slider.querySelector('.swiper')?._swiper;
+      if (swiperInstance) {
+        swiperInstance.destroy(true, true);
+        slider._swiperInitialized = false;
+      }
     }
   });
 }
