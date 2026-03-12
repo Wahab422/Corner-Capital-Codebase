@@ -4,6 +4,7 @@ import { initModalBasic, cleanupModalBasic } from '../components/modal-basic';
 import { initDropdown, cleanupDropdown } from '../components/dropdown';
 import { initAccordionCSS } from 'src/components/accordion';
 import { initRive } from '../components/rive';
+import { stopLenis, startLenis } from '../global/lenis';
 
 const INVESTMENT_MODAL_NAME = 'investment-modal';
 const TRIGGER_SELECTOR = '[data-investment-item]';
@@ -159,10 +160,15 @@ function setupModal(modal) {
   const onOpen = (e) => {
     const { trigger } = e.detail || {};
     if (trigger) populateModal(modal, trigger);
+    stopLenis();
   };
 
   modal.addEventListener('modal:open', onOpen);
   cleanupFns.push(() => modal.removeEventListener('modal:open', onOpen));
+
+  const onClose = () => startLenis();
+  modal.addEventListener('modal:close', onClose);
+  cleanupFns.push(() => modal.removeEventListener('modal:close', onClose));
 }
 
 function setupTriggers() {
@@ -193,7 +199,6 @@ function setupTriggers() {
  * Registers a Finsweet list callback to sync the clear button's is-list-active
  * class with the radio filter state. Runs when Finsweet's list attribute loads.
  */
-
 
 export async function initInvestmentApproachPage() {
   logger.log('📊 Investment Approach page initialized');

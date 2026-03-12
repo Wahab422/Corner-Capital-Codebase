@@ -6,6 +6,7 @@ import { initDropdown, cleanupDropdown } from '../components/dropdown';
 import { initAccordionCSS } from '../components/accordion';
 import { initRive } from '../components/rive';
 import { initCarousel } from '../components/carousel';
+import { stopLenis, startLenis } from '../global/lenis';
 
 const INVESTMENT_MODAL_NAME = 'investment-modal';
 const TRIGGER_SELECTOR = '[data-investment-item]';
@@ -155,10 +156,15 @@ function setupModal(modal) {
   const onOpen = (e) => {
     const { trigger } = e.detail || {};
     if (trigger) populateModal(modal, trigger);
+    stopLenis();
   };
 
   modal.addEventListener('modal:open', onOpen);
   cleanupFns.push(() => modal.removeEventListener('modal:open', onOpen));
+
+  const onClose = () => startLenis();
+  modal.addEventListener('modal:close', onClose);
+  cleanupFns.push(() => modal.removeEventListener('modal:close', onClose));
 }
 
 function setupTriggers() {

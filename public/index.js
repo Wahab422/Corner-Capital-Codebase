@@ -8050,9 +8050,13 @@
       const { trigger } = e2.detail || {};
       if (trigger)
         populateModal(modal, trigger);
+      stopLenis();
     };
     modal.addEventListener("modal:open", onOpen);
     cleanupFns2.push(() => modal.removeEventListener("modal:open", onOpen));
+    const onClose = () => startLenis();
+    modal.addEventListener("modal:close", onClose);
+    cleanupFns2.push(() => modal.removeEventListener("modal:close", onClose));
   }
   function setupTriggers() {
     const cards = document.querySelectorAll(TRIGGER_SELECTOR);
@@ -8152,6 +8156,7 @@
       init_accordion();
       init_rive();
       init_carousel();
+      init_lenis2();
       INVESTMENT_MODAL_NAME = "investment-modal";
       TRIGGER_SELECTOR = "[data-investment-item]";
       MODAL_SELECTOR = `#${INVESTMENT_MODAL_NAME}, [data-modal-name="${INVESTMENT_MODAL_NAME}"]`;
@@ -8288,9 +8293,13 @@
       const { trigger } = e2.detail || {};
       if (trigger)
         populateModal2(modal, trigger);
+      stopLenis();
     };
     modal.addEventListener("modal:open", onOpen);
     cleanupFns3.push(() => modal.removeEventListener("modal:open", onOpen));
+    const onClose = () => startLenis();
+    modal.addEventListener("modal:close", onClose);
+    cleanupFns3.push(() => modal.removeEventListener("modal:close", onClose));
   }
   function setupTriggers2() {
     const cards = document.querySelectorAll(TRIGGER_SELECTOR2);
@@ -8365,6 +8374,7 @@
       init_dropdown();
       init_accordion();
       init_rive();
+      init_lenis2();
       INVESTMENT_MODAL_NAME2 = "investment-modal";
       TRIGGER_SELECTOR2 = "[data-investment-item]";
       MODAL_SELECTOR2 = `#${INVESTMENT_MODAL_NAME2}, [data-modal-name="${INVESTMENT_MODAL_NAME2}"]`;
