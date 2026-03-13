@@ -576,10 +576,6 @@
   function isDomElement(node) {
     return typeof Element !== "undefined" && node instanceof Element;
   }
-  function getCookie(name) {
-    const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-    return match ? decodeURIComponent(match[2]) : null;
-  }
   function setCookie(name, value, days = 365) {
     const expires = /* @__PURE__ */ new Date();
     expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1e3);
@@ -7019,32 +7015,6 @@
     const hText3 = homeHeroSection.querySelector("[hh_text3] ");
     const hText4 = homeHeroSection.querySelector("[hh_text4] ");
     const hText5 = homeHeroSection.querySelector("[hh_text5] ");
-    const hasSeenHero = getCookie(HERO_SEEN_COOKIE);
-    if (hasSeenHero) {
-      hText1?.classList.add("out");
-      hText2?.classList.add("out");
-      setTimeout(() => {
-        hText3?.classList.add("in");
-        document.querySelector(".nav")?.classList.remove("hidden-top");
-      }, 500);
-      setTimeout(() => hText4?.classList.add("in"), 800);
-      setTimeout(() => hText5?.classList.add("in"), 1100);
-      if (homeHeroRiveAnimation) {
-        const riveAttrs = homeHeroRiveAnimation.getAttributeNames().filter((n) => n.startsWith("data-rive"));
-        riveAttrs.forEach((name) => homeHeroRiveAnimation.removeAttribute(name));
-        homeHeroRiveAnimation.setAttribute(
-          "data-rive-src",
-          "https://cdn.prod.website-files.com/698c6383e6bfa7b525ef0e68/69a051cd39f89520df06cd6c_homepage_(bigger).riv"
-        );
-        homeHeroRiveAnimation.setAttribute("data-rive-animation", "2, 3");
-        homeHeroRiveAnimation.setAttribute("data-rive-scrub-animation", "3");
-        homeHeroRiveAnimation.setAttribute("data-rive-autoplay", "");
-        homeHeroRiveAnimation.setAttribute("data-rive-duration", "2.4, 2");
-        homeHeroRiveAnimation.setAttribute("data-rive-scrub-end", "bottom 30%");
-        homeHeroRiveAnimation.setAttribute("data-rive-autoplay-animation", "2");
-      }
-      return;
-    }
     setTimeout(() => {
       hText1?.classList.add("out");
     }, 2e3);
